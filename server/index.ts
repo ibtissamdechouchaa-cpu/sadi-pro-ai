@@ -12,11 +12,12 @@ if (typeof globalThis.crypto === "undefined") {
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { serveStatic } from "@hono/node-server/serve-static";
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
 import { rateLimit, trackSession } from "./lib/rateLimit.js";
 
-const app = new Hono().basePath("/api");
+const app = new Hono();
 
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 
@@ -42,7 +43,7 @@ app.onError((err, c) => {
   return c.json({ error: err.message || "Internal server error" }, 500);
 });
 
-app.get("/health", async (c) => {
+app.get("/api/health", async (c) => {
   try {
     const { prisma } = await import("./lib/prisma.js");
     await prisma.$queryRaw`SELECT 1`;
@@ -52,8 +53,13 @@ app.get("/health", async (c) => {
   }
 });
 
-app.route("/auth", authRoutes);
-app.route("/data", dataRoutes);
+app.route("/api/auth", authRoutes);
+app.route("/api/data", dataRoutes);
+
+if (process.env.NODE_ENV === "production") {
+  app.use("/*", serveStatic({ root: "./dist" }));
+  app.get("*", serveStatic({ path: "./dist/index.html" }));
+}
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
 
