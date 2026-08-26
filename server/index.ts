@@ -57,8 +57,14 @@ app.route("/api/auth", authRoutes);
 app.route("/api/data", dataRoutes);
 
 if (process.env.NODE_ENV === "production") {
+  // Serve built assets first — explicit /assets/* before the SPA fallback,
+  // and make sure JS/CSS requests never fall through to index.html.
+  app.use("/assets/*", serveStatic({ root: "./dist" }));
   app.use("/*", serveStatic({ root: "./dist" }));
-  app.get("*", serveStatic({ path: "./dist/index.html" }));
+  app.get("*", async (c, next) => {
+    if (c.req.path.includes(".")) return c.json({ error: "Not found" }, 404);
+    return serveStatic({ path: "./dist/index.html" })(c, next as never);
+  });
 }
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
