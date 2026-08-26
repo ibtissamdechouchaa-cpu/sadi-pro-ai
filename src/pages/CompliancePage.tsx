@@ -21,6 +21,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useStore } from '@/store/StoreContext';
 import { useToast } from '@/lib/toast';
 import { api } from '@/lib/api';
+import { useTranslation } from '@/lib/i18n';
 import { archiveConfig, formatDate, cn } from '@/lib/utils';
 import type { Document } from '@/types';
 
@@ -40,6 +41,7 @@ interface RetentionPolicy {
 }
 
 export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
+  const { t } = useTranslation();
   const { documents, updateDocument, departments, refreshData } = useStore();
   const { toast } = useToast();
   const [tab, setTab] = useState<'records' | 'retention' | 'legal-hold' | 'frameworks'>('records');
@@ -61,31 +63,31 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const resetForm = () => { setForm({ name: '', documentType: 'other', retentionYears: 7, jurisdiction: '', sector: '' }); setEditing(null); setShowCreate(false); };
 
   const savePolicy = async () => {
-    if (!form.name.trim()) { toast('warning', 'Policy name is required'); return; }
+    if (!form.name.trim()) { toast('warning', t('error')); return; }
     try {
       if (editing) {
         await api.patch(`/api/data/retention-policies/${editing.id}`, { name: form.name.trim(), documentType: form.documentType, retentionYears: Number(form.retentionYears), jurisdiction: form.jurisdiction || null, sector: form.sector || null });
-        toast('success', 'Policy updated');
+        toast('success', t('success'));
       } else {
         await api.post('/api/data/retention-policies', { name: form.name.trim(), documentType: form.documentType, retentionYears: Number(form.retentionYears), jurisdiction: form.jurisdiction || null, sector: form.sector || null });
-        toast('success', 'Policy created');
+        toast('success', t('success'));
       }
       resetForm();
       await loadRetentionPolicies();
-    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : 'Failed to save policy'); }
+    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : t('error')); }
   };
 
   const deletePolicy = async (id: string) => {
-    if (!window.confirm('Delete this retention policy?')) return;
+    if (!window.confirm(`${t('delete')} ${t('retentionPolicies')}?`)) return;
     try {
       await api.delete(`/api/data/retention-policies/${id}`);
       setRetentionPolicies((p) => p.filter((x) => x.id !== id));
-      toast('success', 'Policy deleted');
-    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : 'Delete failed'); }
+      toast('success', t('documentDeleted'));
+    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : t('error')); }
   };
 
   const autoApply = async () => {
-    if (retentionPolicies.length === 0) { toast('warning', 'No policies to apply'); return; }
+    if (retentionPolicies.length === 0) { toast('warning', t('noDocuments')); return; }
     let patched = 0;
     for (const doc of documents) {
       const match = retentionPolicies.find((p) => !p.documentType || p.documentType === doc.type || p.documentType === 'other');
@@ -99,16 +101,16 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
         patched++;
       } catch {}
     }
-    if (patched > 0) { toast('success', `Applied retention to ${patched} document(s)`); refreshData(); }
-    else toast('info', 'No documents needed updating');
+    if (patched > 0) { toast('success', `${patched} ${t('documents')} ${t('success')}`); refreshData(); }
+    else toast('info', t('noDocuments'));
   };
 
   const toggleHold = async (doc: Document) => {
     const next = !doc.legalHold;
     try {
       await updateDocument(doc.id, { legalHold: next } as any);
-      toast('success', next ? 'Legal hold placed' : 'Legal hold released');
-    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : 'Failed to toggle legal hold'); }
+      toast('success', next ? t('legalHolds') : t('legalHolds'));
+    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : t('error')); }
   };
 
   const onHold = documents.filter((d) => d.legalHold);
@@ -119,47 +121,47 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const hasLegalHoldCapability = true;
 
   const frameworkCards = [
-    { name: 'ISO 15489', desc: 'Records Management', ready: documents.length > 0, detail: documents.length > 0 ? `${active.length} active records tracked` : 'No records yet' },
-    { name: 'ISO 27001', desc: 'Information Security', ready: true, detail: 'SHA-256 hashing, access control, encrypted transport' },
-    { name: 'ISO 27701', desc: 'Privacy Information Management', ready: true, detail: 'Retention policies + legal hold guard deletion' },
-    { name: 'GDPR Principles', desc: 'Data protection (where applicable)', ready: hasActiveRetention && hasLegalHoldCapability, detail: hasActiveRetention ? 'Active retention policy configured' : 'Configure a retention policy to complete' },
+    { name: 'ISO 15489', desc: t('recordsManagement'), ready: documents.length > 0, detail: documents.length > 0 ? `${active.length} ${t('recordsManagement')}` : t('noDocuments') },
+    { name: 'ISO 27001', desc: t('security'), ready: true, detail: t('security') },
+    { name: 'ISO 27701', desc: t('security'), ready: true, detail: `${t('retentionPolicies')} + ${t('legalHolds')}` },
+    { name: 'GDPR Principles', desc: t('compliance'), ready: hasActiveRetention && hasLegalHoldCapability, detail: hasActiveRetention ? t('retentionPolicies') : t('compliance') },
   ];
 
   const tabs = [
-    { key: 'records' as const, label: 'Records', icon: Archive },
-    { key: 'retention' as const, label: 'Retention Policies', icon: Clock },
-    { key: 'legal-hold' as const, label: 'Legal Hold', icon: Shield },
-    { key: 'frameworks' as const, label: 'Frameworks', icon: Scale },
+    { key: 'records' as const, label: t('recordsManagement'), icon: Archive },
+    { key: 'retention' as const, label: t('retentionPolicies'), icon: Clock },
+    { key: 'legal-hold' as const, label: t('legalHolds'), icon: Shield },
+    { key: 'frameworks' as const, label: t('compliance'), icon: Scale },
   ];
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Compliance Center</h1>
-        <p className="mt-1 text-sm text-neutral-500">Records management, retention policies, legal hold, and compliance frameworks.</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('compliance')}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t('recordsManagement')} {t('retentionPolicies')} {t('legalHolds')} {t('compliance')}.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatBox icon={<FileText className="h-4 w-4" />} label="Active Records" value={active.length} color="bg-success-50 text-success-600" />
-        <StatBox icon={<Archive className="h-4 w-4" />} label="Archived" value={archived.length} color="bg-neutral-100 text-neutral-600" />
-        <StatBox icon={<Shield className="h-4 w-4" />} label="Legal Hold" value={onHold.length} color="bg-error-50 text-error-600" />
-        <StatBox icon={<Clock className="h-4 w-4" />} label="Expiring Soon" value={expiring.length} color="bg-warning-50 text-warning-600" />
+        <StatBox icon={<FileText className="h-4 w-4" />} label={t('recordsManagement')} value={active.length} color="bg-success-50 text-success-600" />
+        <StatBox icon={<Archive className="h-4 w-4" />} label={t('auditLogs')} value={archived.length} color="bg-neutral-100 text-neutral-600" />
+        <StatBox icon={<Shield className="h-4 w-4" />} label={t('legalHolds')} value={onHold.length} color="bg-error-50 text-error-600" />
+        <StatBox icon={<Clock className="h-4 w-4" />} label={t('expiringSoon')} value={expiring.length} color="bg-warning-50 text-warning-600" />
       </div>
 
       <div className="flex items-center gap-1 overflow-x-auto border-b border-neutral-200">
-        {tabs.map((t) => {
-          const Icon = t.icon;
+        {tabs.map((tItem) => {
+          const Icon = tItem.icon;
           return (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              key={tItem.key}
+              onClick={() => setTab(tItem.key)}
               className={cn(
                 'flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap',
-                tab === t.key ? 'border-primary-600 text-primary-700' : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                tab === tItem.key ? 'border-primary-600 text-primary-700' : 'border-transparent text-neutral-500 hover:text-neutral-900'
               )}
             >
               <Icon className="h-3.5 w-3.5" />
-              {t.label}
+              {tItem.label}
             </button>
           );
         })}
@@ -168,19 +170,19 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
       {tab === 'records' && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>All Records</CardTitle>
+            <CardTitle>{t('recordsManagement')}</CardTitle>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" icon={<Archive className="h-3.5 w-3.5" />} onClick={async () => {
                 const ids = documents.filter((d) => d.archiveState === 'active').slice(0, 10).map((d) => d.id);
-                if (ids.length === 0) { toast('info', 'No active records to archive'); return; }
+                if (ids.length === 0) { toast('info', t('noDocuments')); return; }
                 for (const id of ids) await updateDocument(id, { archiveState: 'archived' } as any);
-                toast('success', `Archived ${ids.length} record(s)`);
-              }}>Bulk Archive</Button>
+                toast('success', `${ids.length} ${t('success')}`);
+              }}>{t('auditLogs')}</Button>
             </div>
           </CardHeader>
           <CardBody className="p-0">
             {documents.length === 0 ? (
-              <EmptyState icon={<FileText className="h-8 w-8" />} title="No records yet" description="Upload documents to start managing records." />
+              <EmptyState icon={<FileText className="h-8 w-8" />} title={t('noDocuments')} description={t('noDocuments')} />
             ) : (
               <div className="divide-y divide-neutral-50">
                 {documents.map((doc) => (
@@ -190,14 +192,14 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-neutral-900 truncate">{doc.title}</p>
-                      <p className="text-xs text-neutral-400">Modified {formatDate(doc.modifiedAt)}</p>
+                      <p className="text-xs text-neutral-400">{t('uploadedAt')} {formatDate(doc.modifiedAt)}</p>
                     </div>
                     <Badge variant="neutral" className={archiveConfig[doc.archiveState].color}>
                       {archiveConfig[doc.archiveState].label}
                     </Badge>
                     {doc.legalHold && <Shield className="h-4 w-4 text-error-500" />}
                     {doc.expiresAt && (
-                      <span className="text-xs text-neutral-400 hidden sm:inline">Expires {formatDate(doc.expiresAt)}</span>
+                      <span className="text-xs text-neutral-400 hidden sm:inline">{t('expiringSoon')} {formatDate(doc.expiresAt)}</span>
                     )}
                   </button>
                 ))}
@@ -210,28 +212,28 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
       {tab === 'retention' && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Retention Policies</CardTitle><InfoTooltip text="How long each document type is kept. Auto-apply sets expiresAt; legal hold blocks disposal." />
+            <CardTitle>{t('retentionPolicies')}</CardTitle><InfoTooltip text={t('retentionPolicies')} />
             <div className="flex gap-2">
               {retentionPolicies.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={autoApply}>Auto-apply to records</Button>
+                <Button variant="ghost" size="sm" onClick={autoApply}>{t('confirm')}</Button>
               )}
-              <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => { resetForm(); setShowCreate(true); }}>Create Policy</Button>
+              <Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => { resetForm(); setShowCreate(true); }}>{t('save')}</Button>
             </div>
           </CardHeader>
           <CardBody className="p-0">
             {retentionPolicies.length === 0 ? (
-              <EmptyState icon={<Clock className="h-8 w-8" />} title="No retention policies" description="Create retention policies to manage document lifecycle." action={<Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>Create Policy</Button>} />
+              <EmptyState icon={<Clock className="h-8 w-8" />} title={t('retentionPolicies')} description={t('retentionPolicies')} action={<Button size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>{t('save')}</Button>} />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">Policy</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">Document Type</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">Retention</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 hidden md:table-cell">Jurisdiction</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 hidden md:table-cell">Sector</th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold text-neutral-500">Actions</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">{t('retentionPolicies')}</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">{t('documentType')}</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">{t('retentionPolicies')}</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 hidden md:table-cell">{t('compliance')}</th>
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500 hidden md:table-cell">{t('department')}</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-neutral-500">{t('edit')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -239,12 +241,12 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                       <tr key={policy.id} className="hover:bg-neutral-50">
                         <td className="px-5 py-3 text-sm font-medium text-neutral-900">{policy.name}</td>
                         <td className="px-5 py-3 text-sm"><Badge variant="neutral">{policy.documentType || 'all'}</Badge></td>
-                        <td className="px-5 py-3 text-sm text-neutral-600">{policy.retentionYears} years</td>
+                        <td className="px-5 py-3 text-sm text-neutral-600">{policy.retentionYears} {t('retentionPolicies')}</td>
                         <td className="px-5 py-3 text-sm text-neutral-500 hidden md:table-cell">{policy.jurisdiction || '—'}</td>
                         <td className="px-5 py-3 text-sm text-neutral-500 hidden md:table-cell">{policy.sector || '—'}</td>
                         <td className="px-5 py-3 text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => { setEditing(policy); setForm({ name: policy.name, documentType: policy.documentType || 'other', retentionYears: policy.retentionYears, jurisdiction: policy.jurisdiction || '', sector: policy.sector || '' }); setShowCreate(true); }}>Edit</Button>
+                            <Button variant="ghost" size="sm" onClick={() => { setEditing(policy); setForm({ name: policy.name, documentType: policy.documentType || 'other', retentionYears: policy.retentionYears, jurisdiction: policy.jurisdiction || '', sector: policy.sector || '' }); setShowCreate(true); }}>{t('edit')}</Button>
                             <Button variant="ghost" size="sm" onClick={() => deletePolicy(policy.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                           </div>
                         </td>
@@ -262,7 +264,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
         <div className="space-y-4">
           <div className="flex justify-end">
             {holdPickerFor === null ? (
-              <Button variant="outline" size="sm" icon={<Lock className="h-3.5 w-3.5" />} onClick={() => setHoldPickerFor('pick')}>Place Hold</Button>
+              <Button variant="outline" size="sm" icon={<Lock className="h-3.5 w-3.5" />} onClick={() => setHoldPickerFor('pick')}>{t('legalHolds')}</Button>
             ) : (
               <div className="flex gap-2">
                 <select onChange={async (e) => {
@@ -273,16 +275,16 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                   await toggleHold(doc);
                   setHoldPickerFor(null);
                 }} defaultValue="" className="h-9 rounded-lg border border-neutral-200 px-3 text-sm">
-                  <option value="">Select document…</option>
+                  <option value="">{t('search')}...</option>
                   {documents.filter((d) => !d.legalHold).slice(0, 50).map((d) => <option key={d.id} value={d.id}>{d.title}</option>)}
                 </select>
-                <Button variant="ghost" size="sm" icon={<X className="h-3.5 w-3.5" />} onClick={() => setHoldPickerFor(null)}>Cancel</Button>
+                <Button variant="ghost" size="sm" icon={<X className="h-3.5 w-3.5" />} onClick={() => setHoldPickerFor(null)}>{t('cancel')}</Button>
               </div>
             )}
           </div>
           {onHold.length === 0 ? (
             <Card>
-              <EmptyState icon={<Shield className="h-8 w-8" />} title="No documents on legal hold" description="Legal hold prevents documents from being deleted or disposed, even if retention policies would normally allow it." />
+              <EmptyState icon={<Shield className="h-8 w-8" />} title={t('legalHolds')} description={t('legalHolds')} />
             </Card>
           ) : (
             onHold.map((doc) => (
@@ -295,13 +297,13 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-semibold text-neutral-900">{doc.title}</h3>
-                        <Badge variant="error">Legal Hold</Badge>
+                        <Badge variant="error">{t('legalHolds')}</Badge>
                       </div>
-                      <p className="text-xs text-neutral-500 mt-1">Hold active since {formatDate(doc.modifiedAt)}</p>
+                      <p className="text-xs text-neutral-500 mt-1">{t('uploadedAt')} {formatDate(doc.modifiedAt)}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => onOpenDocument(doc)}>View</Button>
-                      <Button variant="ghost" size="sm" icon={<Check className="h-3.5 w-3.5" />} onClick={() => toggleHold(doc)}>Release</Button>
+                      <Button variant="outline" size="sm" onClick={() => onOpenDocument(doc)}>{t('view')}</Button>
+                      <Button variant="ghost" size="sm" icon={<Check className="h-3.5 w-3.5" />} onClick={() => toggleHold(doc)}>{t('close')}</Button>
                     </div>
                   </div>
                 </CardBody>
@@ -318,10 +320,9 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-warning-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-neutral-900">Compliance-Ready Architecture</p>
+                  <p className="text-sm font-medium text-neutral-900">{t('compliance')} {t('recordsManagement')}</p>
                   <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
-                    SADI PRO provides a compliance-ready architecture with configurable policies, audit capabilities, and records management controls.
-                    This does not constitute legal compliance certification. Consult your legal team for jurisdiction-specific requirements.
+                    {t('compliance')} {t('recordsManagement')} {t('compliance')}.
                   </p>
                 </div>
               </div>
@@ -343,7 +344,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                         <p className="text-[11px] text-neutral-400 mt-1">{fw.detail}</p>
                       </div>
                     </div>
-                    <Badge variant={fw.ready ? 'success' : 'neutral'} dot>{fw.ready ? 'Ready' : 'Setup needed'}</Badge>
+                    <Badge variant={fw.ready ? 'success' : 'neutral'} dot>{fw.ready ? t('success') : t('error')}</Badge>
                   </div>
                 </CardBody>
               </Card>
@@ -352,17 +353,17 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
         </div>
       )}
 
-      <Modal open={showCreate} onClose={resetForm} title={editing ? 'Edit Retention Policy' : 'Create Retention Policy'} footer={<><Button variant="outline" onClick={resetForm}>Cancel</Button><Button onClick={savePolicy}>{editing ? 'Save' : 'Create'}</Button></>}>
+      <Modal open={showCreate} onClose={resetForm} title={editing ? t('edit') : t('save')} footer={<><Button variant="outline" onClick={resetForm}>{t('cancel')}</Button><Button onClick={savePolicy}>{editing ? t('save') : t('save')}</Button></>}>
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-neutral-700 mb-1">Policy name</label>
-            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Invoices - 7 years" className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
+            <label className="block text-xs font-medium text-neutral-700 mb-1">{t('retentionPolicies')}</label>
+            <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t('retentionPolicies')} className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1">Document type</label>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">{t('documentType')}</label>
               <select value={form.documentType} onChange={(e) => setForm((f) => ({ ...f, documentType: e.target.value }))} className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm">
-                <option value="other">All types</option>
+                <option value="other">{t('allDocuments')}</option>
                 <option value="invoice">Invoice</option>
                 <option value="contract">Contract</option>
                 <option value="report">Report</option>
@@ -374,18 +375,18 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1">Retention (years)</label>
+              <label className="block text-xs font-medium text-neutral-700 mb-1">{t('retentionPolicies')}</label>
               <input type="number" min={1} max={100} value={form.retentionYears} onChange={(e) => setForm((f) => ({ ...f, retentionYears: Number(e.target.value) }))} className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1">Jurisdiction (optional)</label>
-              <input value={form.jurisdiction} onChange={(e) => setForm((f) => ({ ...f, jurisdiction: e.target.value }))} placeholder="e.g. MA, EU" className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
+              <label className="block text-xs font-medium text-neutral-700 mb-1">{t('compliance')} ({t('close')})</label>
+              <input value={form.jurisdiction} onChange={(e) => setForm((f) => ({ ...f, jurisdiction: e.target.value }))} placeholder={t('compliance')} className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-neutral-700 mb-1">Sector (optional)</label>
-              <input value={form.sector} onChange={(e) => setForm((f) => ({ ...f, sector: e.target.value }))} placeholder="e.g. finance" className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
+              <label className="block text-xs font-medium text-neutral-700 mb-1">{t('department')} ({t('close')})</label>
+              <input value={form.sector} onChange={(e) => setForm((f) => ({ ...f, sector: e.target.value }))} placeholder={t('department')} className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none" />
             </div>
           </div>
         </div>

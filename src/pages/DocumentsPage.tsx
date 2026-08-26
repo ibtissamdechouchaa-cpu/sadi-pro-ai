@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useStore } from '@/store/StoreContext';
 import { useToast } from '@/lib/toast';
 import { api } from '@/lib/api';
+import { useTranslation } from '@/lib/i18n';
 import {
   statusConfig,
   typeConfig,
@@ -47,6 +48,7 @@ interface DocumentsPageProps {
 }
 
 export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
+  const { t } = useTranslation();
   const { documents, departments, addDocuments, deleteDocument, isLoading } = useStore();
   const { toast } = useToast();
   const [view, setView] = useState<'grid' | 'list'>('list');
@@ -146,7 +148,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
 
   const handleRowDownload = async (doc: Document) => {
     if (!doc.filePath) {
-      toast('warning', 'This document has no file attached.');
+      toast('warning', t('noDocuments'));
       return;
     }
     try {
@@ -164,7 +166,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Download failed:', err);
-      toast('error', 'Failed to download file.');
+      toast('error', t('error'));
     }
   };
 
@@ -199,8 +201,8 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Documents</h1>
-          <p className="mt-1 text-sm text-neutral-500">{filtered.length} of {documents.length} documents</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('documents')}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{filtered.length} {t('documents')} {t('allDocuments')}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-neutral-200 bg-white p-0.5">
@@ -218,7 +220,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
             </button>
           </div>
           <Button icon={<Upload className="h-4 w-4" />} onClick={() => fileInputRef.current?.click()}>
-            Upload
+            {t('upload')}
           </Button>
           <input
             ref={fileInputRef}
@@ -238,7 +240,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title or tag..."
+            placeholder={t('search')}
             className="w-full h-10 rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none transition-colors"
           />
         </div>
@@ -247,7 +249,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
           icon={<Filter className="h-4 w-4" />}
           onClick={() => setShowFilters(!showFilters)}
         >
-          Filters
+          {t('filter')}
           {activeFilters > 0 && (
             <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">
               {activeFilters}
@@ -260,16 +262,16 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
       {showFilters && (
         <Card className="animate-slide-up">
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <FilterSelect label="Type" value={typeFilter} onChange={(v) => setTypeFilter(v as DocType | 'all')} options={[{ value: 'all', label: 'All types' }, ...Object.entries(typeConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
-            <FilterSelect label="Classification" value={classFilter} onChange={(v) => setClassFilter(v as ClassificationLevel | 'all')} options={[{ value: 'all', label: 'All levels' }, ...Object.entries(classificationConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
-            <FilterSelect label="Department" value={deptFilter} onChange={(v) => setDeptFilter(v)} options={[{ value: 'all', label: 'All departments' }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
-            <FilterSelect label="Status" value={statusFilter} onChange={(v) => setStatusFilter(v)} options={[{ value: 'all', label: 'All statuses' }, ...Object.entries(statusConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
+            <FilterSelect label={t('documentType')} value={typeFilter} onChange={(v) => setTypeFilter(v as DocType | 'all')} options={[{ value: 'all', label: t('allDocuments') }, ...Object.entries(typeConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
+            <FilterSelect label={t('classification')} value={classFilter} onChange={(v) => setClassFilter(v as ClassificationLevel | 'all')} options={[{ value: 'all', label: t('classification') }, ...Object.entries(classificationConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
+            <FilterSelect label={t('department')} value={deptFilter} onChange={(v) => setDeptFilter(v)} options={[{ value: 'all', label: t('department') }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
+            <FilterSelect label={t('status')} value={statusFilter} onChange={(v) => setStatusFilter(v)} options={[{ value: 'all', label: t('status') }, ...Object.entries(statusConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
             {activeFilters > 0 && (
               <button
                 onClick={() => { setTypeFilter('all'); setClassFilter('all'); setDeptFilter('all'); setStatusFilter('all'); }}
                 className="flex items-center gap-1 text-xs font-medium text-error-600 hover:text-error-700"
               >
-                <X className="h-3 w-3" /> Clear all filters
+                <X className="h-3 w-3" /> {t('close')} {t('filter')}
               </button>
             )}
           </CardBody>
@@ -279,35 +281,35 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
       {/* Bulk actions bar */}
       {selected.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2.5 animate-slide-up">
-          <span className="text-sm font-medium text-primary-700">{selected.size} selected</span>
+          <span className="text-sm font-medium text-primary-700">{selected.size} {t('documents')}</span>
           <div className="flex-1" />
           <div className="relative" ref={bulkShareRef}>
             <Button variant="ghost" size="sm" icon={<Share2 className="h-3.5 w-3.5" />} onClick={() => setBulkShareOpen(!bulkShareOpen)}>
-              Share
+              {t('view')}
             </Button>
             {bulkShareOpen && (
               <div className="absolute right-0 top-full z-20 mt-1 w-64 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
-                <p className="text-xs font-medium text-neutral-700 mb-2">Share with</p>
+                <p className="text-xs font-medium text-neutral-700 mb-2">{t('view')}</p>
                 <input
                   type="email"
                   value={bulkShareEmail}
                   onChange={(e) => setBulkShareEmail(e.target.value)}
-                  placeholder="Enter email address"
+                  placeholder={t('email')}
                   className="w-full h-8 rounded border border-neutral-200 bg-white px-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
                   onKeyDown={(e) => { if (e.key === 'Enter') handleBulkShare(); }}
                 />
                 <div className="flex justify-end gap-1.5 mt-2">
-                  <button onClick={() => { setBulkShareOpen(false); setBulkShareEmail(''); }} className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700">Cancel</button>
-                  <button onClick={handleBulkShare} className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700">Share</button>
+                  <button onClick={() => { setBulkShareOpen(false); setBulkShareEmail(''); }} className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700">{t('cancel')}</button>
+                  <button onClick={handleBulkShare} className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700">{t('view')}</button>
                 </div>
               </div>
             )}
           </div>
           <Button variant="ghost" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleBulkExport}>
-            Export
+            {t('export')}
           </Button>
-          <Button variant="ghost" size="sm" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => { if (!window.confirm(`Delete ${selected.size} document(s)?`)) return; const n = selected.size; selected.forEach((id) => deleteDocument(id)); setSelected(new Set()); toast('success', `${n} document(s) moved to trash`); }}>
-            Delete
+          <Button variant="ghost" size="sm" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => { if (!window.confirm(`${t('delete')} ${selected.size} ${t('documents')}?`)) return; const n = selected.size; selected.forEach((id) => deleteDocument(id)); setSelected(new Set()); toast('success', `${n} ${t('documentDeleted')}`); }}>
+            {t('delete')}
           </Button>
           <button onClick={() => setSelected(new Set())} className="rounded p-1 text-primary-400 hover:text-primary-700">
             <X className="h-4 w-4" />
@@ -323,7 +325,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
               <FileUp className="h-4 w-4 text-primary-600 animate-pulse-soft" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-neutral-900">Uploading {uploadProgress.name}</p>
+              <p className="text-sm font-medium text-neutral-900">{t('upload')} {uploadProgress.name}</p>
               <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
                 {uploadProgress.progress < 0 ? (
                   <div className="h-full w-1/3 rounded-full bg-primary-500 animate-[shimmer_1.5s_infinite]" />
@@ -333,7 +335,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
               </div>
             </div>
             <span className="text-xs font-medium text-primary-600">
-              {uploadProgress.progress < 0 ? 'Uploading...' : `${uploadProgress.progress}%`}
+              {uploadProgress.progress < 0 ? t('upload') : `${uploadProgress.progress}%`}
             </span>
           </CardBody>
         </Card>
@@ -348,7 +350,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
           className="rounded-xl border-2 border-dashed border-primary-400 bg-primary-50 py-16 text-center"
         >
           <FileUp className="mx-auto h-10 w-10 text-primary-500" />
-          <p className="mt-3 text-sm font-medium text-primary-700">Drop files to upload</p>
+          <p className="mt-3 text-sm font-medium text-primary-700">{t('dragDropFiles')}</p>
         </div>
       )}
 
@@ -357,9 +359,9 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
         <Card>
           <EmptyState
             icon={<FileText className="h-8 w-8" />}
-            title="No documents found"
-            description={search || activeFilters > 0 ? "Try adjusting your search or filters." : "Upload your first documents to get started."}
-            action={<Button icon={<Upload className="h-4 w-4" />} onClick={() => fileInputRef.current?.click()}>Upload Documents</Button>}
+            title={t('noDocuments')}
+            description={search || activeFilters > 0 ? t('noSearchResults') : t('noDocuments')}
+            action={<Button icon={<Upload className="h-4 w-4" />} onClick={() => fileInputRef.current?.click()}>{t('uploadDocuments')}</Button>}
           />
         </Card>
       ) : view === 'list' ? (
@@ -376,12 +378,12 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                       className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden md:table-cell">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden lg:table-cell">Classification</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden lg:table-cell">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden xl:table-cell">Size</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden xl:table-cell">Modified</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500">{t('documents')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden md:table-cell">{t('documentType')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden lg:table-cell">{t('classification')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden lg:table-cell">{t('status')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden xl:table-cell">{t('fileSize')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500 hidden xl:table-cell">{t('uploadedAt')}</th>
                   <th className="w-10 px-4 py-3"></th>
                 </tr>
               </thead>
@@ -435,7 +437,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                       <div className="relative" ref={rowDropdownRef}>
                         <button
                           onClick={() => setRowDropdownId(rowDropdownId === doc.id ? null : doc.id)}
-                          aria-label="Document actions"
+                          aria-label={t('view')}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors"
                         >
                           <MoreVertical className="h-4 w-4" />
@@ -446,37 +448,37 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                               onClick={() => { handleRowDownload(doc); setRowDropdownId(null); }}
                               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
                             >
-                              <Download className="h-3.5 w-3.5" /> Download
+                              <Download className="h-3.5 w-3.5" /> {t('download')}
                             </button>
                             <button
                               onClick={() => { setRowShareId(doc.id); setRowDropdownId(null); }}
                               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
                             >
-                              <Share2 className="h-3.5 w-3.5" /> Share
+                              <Share2 className="h-3.5 w-3.5" /> {t('view')}
                             </button>
                             <button
                               onClick={() => handleRowDelete(doc.id)}
                               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-error-600 hover:bg-error-50"
                             >
-                              <Trash2 className="h-3.5 w-3.5" /> Delete
+                              <Trash2 className="h-3.5 w-3.5" /> {t('delete')}
                             </button>
                           </div>
                         )}
                         {rowShareId === doc.id && (
                           <div className="absolute right-0 top-full z-30 mt-1 w-56 rounded-lg border border-neutral-200 bg-white p-3 shadow-lg">
-                            <p className="text-xs font-medium text-neutral-700 mb-2">Share "{doc.title.slice(0, 20)}..."</p>
+                            <p className="text-xs font-medium text-neutral-700 mb-2">{t('view')} "{doc.title.slice(0, 20)}..."</p>
                             <input
                               type="email"
                               value={rowShareEmail}
                               onChange={(e) => setRowShareEmail(e.target.value)}
-                              placeholder="Enter email address"
+                              placeholder={t('email')}
                               className="w-full h-8 rounded border border-neutral-200 bg-white px-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
                               onKeyDown={(e) => { if (e.key === 'Enter') handleRowShare(doc.id); }}
                               autoFocus
                             />
                             <div className="flex justify-end gap-1.5 mt-2">
-                              <button onClick={() => { setRowShareId(null); setRowShareEmail(''); }} className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700">Cancel</button>
-                              <button onClick={() => handleRowShare(doc.id)} className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700">Share</button>
+                              <button onClick={() => { setRowShareId(null); setRowShareEmail(''); }} className="px-2 py-1 text-xs text-neutral-500 hover:text-neutral-700">{t('cancel')}</button>
+                              <button onClick={() => handleRowShare(doc.id)} className="px-2 py-1 text-xs font-medium text-white bg-primary-600 rounded hover:bg-primary-700">{t('view')}</button>
                             </div>
                           </div>
                         )}

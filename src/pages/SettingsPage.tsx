@@ -18,6 +18,7 @@ import { useStore } from '@/store/StoreContext';
 import { useAuth } from '@/lib/auth';
 import { plans } from '@/lib/billing';
 import { setLocale, getLocale, type Locale } from '@/lib/i18n';
+import { useTranslation } from '@/lib/i18n';
 import { percentage, cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useToast } from '@/lib/toast';
@@ -26,6 +27,7 @@ import type { PlanTier } from '@/types';
 type SettingsTab = 'organization' | 'billing' | 'notifications' | 'security' | 'language';
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const { usage, departments } = useStore();
   const { user, organization, refreshOrganization } = useAuth();
   const { toast } = useToast();
@@ -57,11 +59,11 @@ export function SettingsPage() {
   const [generatedApiKey, setGeneratedApiKey] = useState('');
 
   const tabs: { key: SettingsTab; label: string; icon: typeof SettingsIcon }[] = [
-    { key: 'organization', label: 'Organization', icon: Building2 },
-    { key: 'billing', label: 'Billing & Plan', icon: CreditCard },
-    { key: 'notifications', label: 'Notifications', icon: Bell },
-    { key: 'security', label: 'Security', icon: Lock },
-    { key: 'language', label: 'Language & Region', icon: Globe },
+    { key: 'organization', label: t('organization'), icon: Building2 },
+    { key: 'billing', label: t('billing'), icon: CreditCard },
+    { key: 'notifications', label: t('notifications'), icon: Bell },
+    { key: 'security', label: t('security'), icon: Lock },
+    { key: 'language', label: t('language'), icon: Globe },
   ];
 
   const currentPlan = plans.find((p) => p.tier === (organization?.planTier || 'business')) || plans[0];
@@ -77,9 +79,9 @@ export function SettingsPage() {
         timezone: orgTimezone,
       });
       await refreshOrganization();
-      toast('success', 'Organization settings saved.');
+      toast('success', t('success'));
     } catch {
-      toast('error', 'Failed to save organization settings.');
+      toast('error', t('error'));
     } finally {
       setSavingOrg(false);
     }
@@ -97,7 +99,7 @@ export function SettingsPage() {
       });
       await refreshOrganization();
     } catch {
-      toast('error', 'Failed to save notification preferences.');
+      toast('error', t('error'));
     }
   };
 
@@ -113,7 +115,7 @@ export function SettingsPage() {
       });
       await refreshOrganization();
     } catch {
-      toast('error', 'Failed to save timezone.');
+      toast('error', t('error'));
     }
   };
 
@@ -128,7 +130,7 @@ export function SettingsPage() {
       });
       await refreshOrganization();
     } catch {
-      toast('error', 'Failed to save date format.');
+      toast('error', t('error'));
     }
   };
 
@@ -137,9 +139,9 @@ export function SettingsPage() {
       await api.patch('/api/data/organization', { planTier: tier });
       await refreshOrganization();
       setShowPlanModal(false);
-      toast('success', `Plan changed to ${plans.find(p => p.tier === tier)?.name}.`);
+      toast('success', `${t('currentPlan')} ${plans.find(p => p.tier === tier)?.name}.`);
     } catch {
-      toast('error', 'Failed to change plan.');
+      toast('error', t('error'));
     }
   };
 
@@ -156,9 +158,9 @@ export function SettingsPage() {
         },
       });
       await refreshOrganization();
-      toast('success', 'API key generated and saved.');
+      toast('success', t('success'));
     } catch {
-      toast('error', 'Failed to save API key.');
+      toast('error', t('error'));
     }
   };
 
@@ -172,9 +174,9 @@ export function SettingsPage() {
       a.download = `organization-${organization?.slug || 'data'}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast('success', 'Organization data exported.');
+      toast('success', t('success'));
     } catch {
-      toast('error', 'Failed to export organization data.');
+      toast('error', t('error'));
     }
   };
 
@@ -188,30 +190,30 @@ export function SettingsPage() {
       a.download = `user-${user?.email || 'data'}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast('success', 'User data exported.');
+      toast('success', t('success'));
     } catch {
-      toast('error', 'Failed to export user data.');
+      toast('error', t('error'));
     }
   };
 
   const handleRequestDeletion = async () => {
-    if (!window.confirm('Are you sure you want to request account deletion? This action will deactivate your account.')) return;
+    if (!window.confirm(`${t('delete')} ${t('organization')}?`)) return;
     try {
       await api.patch(`/api/data/users/${user?.id}`, { isActive: false });
-      toast('success', 'Account scheduled for deletion. You will be logged out shortly.');
+      toast('success', t('success'));
       setTimeout(() => {
         localStorage.removeItem('sadi_token');
         window.location.href = '/';
       }, 2000);
     } catch {
-      toast('error', 'Failed to process deletion request.');
+      toast('error', t('error'));
     }
   };
 
   const handleDownloadInvoice = (inv: { id: string; date: string; amount: string; status: string }) => {
     const invoiceText = [
       '=====================================',
-      '               INVOICE',
+      `               ${t('billing')}`,
       '=====================================',
       '',
       `Invoice ID:    ${inv.id}`,
@@ -223,8 +225,8 @@ export function SettingsPage() {
       `Plan:          ${currentPlan.name}`,
       '',
       '-------------------------------------',
-      'Thank you for your business!',
-      'SADI PRO AI',
+      t('success'),
+      t('appName'),
       '=====================================',
     ].join('\n');
     const blob = new Blob([invoiceText], { type: 'text/plain' });
@@ -245,27 +247,27 @@ export function SettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-500">Manage your organization, billing, security, and preferences.</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('settings')}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t('organization')} {t('billing')} {t('security')} {t('language')}.</p>
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Sidebar */}
         <div className="lg:w-56 shrink-0">
           <div className="flex lg:flex-col gap-1 overflow-x-auto">
-            {tabs.map((t) => {
-              const Icon = t.icon;
+            {tabs.map((tItem) => {
+              const Icon = tItem.icon;
               return (
                 <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
+                  key={tItem.key}
+                  onClick={() => setTab(tItem.key)}
                   className={cn(
                     'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap',
-                    tab === t.key ? 'bg-primary-50 text-primary-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                    tab === tItem.key ? 'bg-primary-50 text-primary-700' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  {t.label}
+                  {tItem.label}
                 </button>
               );
             })}
@@ -277,25 +279,25 @@ export function SettingsPage() {
           {tab === 'organization' && (
             <div className="space-y-4">
               <Card>
-                <CardHeader><CardTitle>Organization Details</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('organization')}</CardTitle></CardHeader>
                 <CardBody className="space-y-4">
-                  <EditableField label="Organization Name" value={orgName} onChange={setOrgName} />
-                  <Field label="Slug" value={organization?.slug || ''} />
-                  <EditableField label="Country" value={orgCountry} onChange={setOrgCountry} />
-                  <EditableField label="Industry" value={orgIndustry} onChange={setOrgIndustry} />
+                  <EditableField label={t('organizationName')} value={orgName} onChange={setOrgName} />
+                  <Field label={t('organization')} value={organization?.slug || ''} />
+                  <EditableField label={t('organization')} value={orgCountry} onChange={setOrgCountry} />
+                  <EditableField label={t('organization')} value={orgIndustry} onChange={setOrgIndustry} />
                   <div className="pt-2">
                     <Button variant="outline" size="sm" onClick={handleSaveOrg} disabled={savingOrg}>
-                      {savingOrg ? 'Saving...' : 'Save Changes'}
+                      {savingOrg ? t('loading') : t('save')}
                     </Button>
                   </div>
                 </CardBody>
               </Card>
 
               <Card>
-                <CardHeader><CardTitle>Departments</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('department')}</CardTitle></CardHeader>
                 <CardBody className="space-y-2">
                   {departments.length === 0 ? (
-                    <p className="text-sm text-neutral-500">No departments yet. Create departments from Team & Roles.</p>
+                    <p className="text-sm text-neutral-500">{t('noDocuments')}</p>
                   ) : (
                     departments.map((dept) => (
                       <div key={dept.id} className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-2.5">
@@ -303,7 +305,7 @@ export function SettingsPage() {
                           <div className="h-3 w-3 rounded-full" style={{ backgroundColor: dept.color }} />
                           <span className="text-sm font-medium text-neutral-900">{dept.name}</span>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => toast('info', `Managing department: ${dept.name} — coming soon`)}>Manage</Button>
+                        <Button variant="ghost" size="sm" onClick={() => toast('info', `${t('department')}: ${dept.name}`)}>{t('view')}</Button>
                       </div>
                     ))
                   )}
@@ -316,32 +318,32 @@ export function SettingsPage() {
             <div className="space-y-4">
               {/* Current Plan */}
               <Card>
-                <CardHeader><CardTitle>Current Plan</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('currentPlan')}</CardTitle></CardHeader>
                 <CardBody>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-bold text-neutral-900">{currentPlan.name}</h3>
-                        <Badge variant="success" dot>Active</Badge>
+                        <Badge variant="success" dot>{t('success')}</Badge>
                       </div>
                       <p className="text-sm text-neutral-500 mt-1">
-                        {new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice)} DZD/mois HT — Renouvellement 1 Jan 2027
+                        {new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice)} DZD/mois HT — {t('currentPlan')}
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setShowPlanModal(true)}>Change Plan</Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowPlanModal(true)}>{t('upgrade')}</Button>
                   </div>
                 </CardBody>
               </Card>
 
               {/* Usage */}
               <Card>
-                <CardHeader><CardTitle>Usage</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('storageUsed')}</CardTitle></CardHeader>
                 <CardBody className="space-y-4">
-                  <UsageRow label="Storage" used={`${usage.storageUsedGB} GB`} limit={`${usage.storageLimitGB} GB`} pct={percentage(usage.storageUsedGB, usage.storageLimitGB)} />
-                  <UsageRow label="Documents" used={usage.documentCount.toString()} limit={usage.documentLimit.toLocaleString()} pct={percentage(usage.documentCount, usage.documentLimit)} />
-                  <UsageRow label="Users" used={usage.userCount.toString()} limit={usage.userLimit.toString()} pct={percentage(usage.userCount, usage.userLimit)} />
-                  <UsageRow label="AI Tokens" used={usage.aiTokensUsed.toLocaleString()} limit={usage.aiTokensLimit.toLocaleString()} pct={percentage(usage.aiTokensUsed, usage.aiTokensLimit)} />
-                  <UsageRow label="OCR Pages" used={usage.ocrPagesUsed.toLocaleString()} limit={usage.ocrPagesLimit.toLocaleString()} pct={percentage(usage.ocrPagesUsed, usage.ocrPagesLimit)} />
+                  <UsageRow label={t('storageUsed')} used={`${usage.storageUsedGB} GB`} limit={`${usage.storageLimitGB} GB`} pct={percentage(usage.storageUsedGB, usage.storageLimitGB)} />
+                  <UsageRow label={t('documents')} used={usage.documentCount.toString()} limit={usage.documentLimit.toLocaleString()} pct={percentage(usage.documentCount, usage.documentLimit)} />
+                  <UsageRow label={t('team')} used={usage.userCount.toString()} limit={usage.userLimit.toString()} pct={percentage(usage.userCount, usage.userLimit)} />
+                  <UsageRow label={t('aiInsights')} used={usage.aiTokensUsed.toLocaleString()} limit={usage.aiTokensLimit.toLocaleString()} pct={percentage(usage.aiTokensUsed, usage.aiTokensLimit)} />
+                  <UsageRow label={t('aiInsights')} used={usage.ocrPagesUsed.toLocaleString()} limit={usage.ocrPagesLimit.toLocaleString()} pct={percentage(usage.ocrPagesUsed, usage.ocrPagesLimit)} />
                 </CardBody>
               </Card>
 
@@ -349,10 +351,10 @@ export function SettingsPage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Available Plans</CardTitle>
+                    <CardTitle>{t('currentPlan')}</CardTitle>
                     <div className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 p-0.5">
-                      <button onClick={() => setBillingCycle('monthly')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'monthly' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>Monthly</button>
-                      <button onClick={() => setBillingCycle('annual')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'annual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>Annual</button>
+                      <button onClick={() => setBillingCycle('monthly')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'monthly' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>{t('previous')}</button>
+                      <button onClick={() => setBillingCycle('annual')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'annual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>{t('next')}</button>
                     </div>
                   </div>
                 </CardHeader>
@@ -368,10 +370,10 @@ export function SettingsPage() {
                     >
                       <h4 className="text-sm font-bold text-neutral-900">{plan.name}</h4>
                       <p className="mt-2 text-2xl font-bold text-neutral-900">
-                        {plan.tier === 'enterprise' ? 'Sur devis' : `${new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice)} DZD`}
+                        {plan.tier === 'enterprise' ? t('currentPlan') : `${new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice)} DZD`}
                         {plan.tier !== 'enterprise' && <span className="text-xs font-normal text-neutral-400">/mois HT</span>}
                       </p>
-                      {plan.tier !== 'enterprise' && <p className="text-[11px] text-neutral-400">DZD · TVA 19% incluse</p>}
+                      {plan.tier !== 'enterprise' && <p className="text-[11px] text-neutral-400">{t('billing')}</p>}
                       <ul className="mt-3 space-y-1.5">
                         {plan.features.slice(0, 3).map((f) => (
                           <li key={f} className="flex items-start gap-1.5">
@@ -387,13 +389,13 @@ export function SettingsPage() {
                         disabled={plan.tier === currentPlan.tier}
                         onClick={() => {
                           if (plan.tier === 'enterprise') {
-                            toast('info', 'Please contact sales for Enterprise plan.');
+                            toast('info', t('currentPlan'));
                           } else if (plan.tier !== currentPlan.tier) {
                             handlePlanSelect(plan.tier);
                           }
                         }}
                       >
-                        {plan.tier === currentPlan.tier ? 'Current Plan' : plan.tier === 'enterprise' ? 'Contact Sales' : 'Select Plan'}
+                        {plan.tier === currentPlan.tier ? t('currentPlan') : plan.tier === 'enterprise' ? t('view') : t('upgrade')}
                       </Button>
                     </div>
                   ))}
@@ -402,7 +404,7 @@ export function SettingsPage() {
 
               {/* Invoices */}
               <Card>
-                <CardHeader><CardTitle>Recent Invoices</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('billing')}</CardTitle></CardHeader>
                 <CardBody className="p-0">
                   <div className="divide-y divide-neutral-50">
                     {invoices.map((inv) => (
@@ -430,16 +432,16 @@ export function SettingsPage() {
 
           {tab === 'notifications' && (
             <Card>
-              <CardHeader><CardTitle>Notification Preferences</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t('notifications')}</CardTitle></CardHeader>
               <CardBody className="space-y-3">
                 {[
-                  { key: 'documentProcessed', label: 'Document processed', desc: 'When a document finishes processing' },
-                  { key: 'processingFailed', label: 'Processing failed', desc: 'When a document fails to process' },
-                  { key: 'documentExpiring', label: 'Document expiring', desc: 'When a document is near expiration' },
-                  { key: 'approvalRequested', label: 'Approval requested', desc: 'When a document needs your review' },
-                  { key: 'retentionEvent', label: 'Retention event', desc: 'When a retention policy triggers' },
-                  { key: 'subscriptionWarning', label: 'Subscription warning', desc: 'Usage limits and billing alerts' },
-                  { key: 'securityEvent', label: 'Security event', desc: 'Important security notifications' },
+                  { key: 'documentProcessed', label: t('documents'), desc: t('processing') },
+                  { key: 'processingFailed', label: t('error'), desc: t('processing') },
+                  { key: 'documentExpiring', label: t('expiringSoon'), desc: t('expiringSoon') },
+                  { key: 'approvalRequested', label: t('needsReview'), desc: t('needsReview') },
+                  { key: 'retentionEvent', label: t('retentionPolicies'), desc: t('retentionPolicies') },
+                  { key: 'subscriptionWarning', label: t('billing'), desc: t('billing') },
+                  { key: 'securityEvent', label: t('security'), desc: t('security') },
                 ].map((n) => (
                   <div key={n.key} className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div>
@@ -459,38 +461,38 @@ export function SettingsPage() {
           {tab === 'security' && (
             <div className="space-y-4">
               <Card>
-                <CardHeader><CardTitle>Authentication</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('security')}</CardTitle></CardHeader>
                 <CardBody className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div>
-                      <p className="text-sm font-medium text-neutral-900">Two-Factor Authentication</p>
-                      <p className="text-xs text-neutral-500">Add an extra layer of security to your account</p>
+                      <p className="text-sm font-medium text-neutral-900">{t('security')}</p>
+                      <p className="text-xs text-neutral-500">{t('security')}</p>
                     </div>
-                    <Toggle defaultOn={false} onChange={() => toast('info', 'Two-factor authentication coming soon.')} />
+                    <Toggle defaultOn={false} onChange={() => toast('info', t('security'))} />
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div>
-                      <p className="text-sm font-medium text-neutral-900">Session Timeout</p>
-                      <p className="text-xs text-neutral-500">Automatically sign out after inactivity</p>
+                      <p className="text-sm font-medium text-neutral-900">{t('security')}</p>
+                      <p className="text-xs text-neutral-500">{t('security')}</p>
                     </div>
-                    <span className="text-sm text-neutral-600">30 minutes</span>
+                    <span className="text-sm text-neutral-600">30 {t('previous')}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div>
-                      <p className="text-sm font-medium text-neutral-900">Password Policy</p>
-                      <p className="text-xs text-neutral-500">Minimum 12 characters, mixed case, numbers</p>
+                      <p className="text-sm font-medium text-neutral-900">{t('password')}</p>
+                      <p className="text-xs text-neutral-500">{t('password')}</p>
                     </div>
-                    <Badge variant="success" dot>Enforced</Badge>
+                    <Badge variant="success" dot>{t('success')}</Badge>
                   </div>
                 </CardBody>
               </Card>
 
               <Card>
-                <CardHeader><CardTitle>API Keys</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('security')}</CardTitle></CardHeader>
                 <CardBody>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-neutral-500">Manage API keys for programmatic access</p>
-                    <Button variant="outline" size="sm" onClick={handleGenerateApiKey}>Generate Key</Button>
+                    <p className="text-sm text-neutral-500">{t('security')}</p>
+                    <Button variant="outline" size="sm" onClick={handleGenerateApiKey}>{t('save')}</Button>
                   </div>
                   <div className="rounded-lg border border-neutral-100 px-4 py-3">
                     <div className="flex items-center justify-between">
@@ -503,21 +505,21 @@ export function SettingsPage() {
                               : 'sadi_sk_••••••••••••••••'}
                         </p>
                         <p className="text-xs text-neutral-400 mt-0.5">
-                          {generatedApiKey ? 'Just generated' : 'No key generated yet'}
+                          {generatedApiKey ? t('success') : t('noDocuments')}
                         </p>
                       </div>
-                      <Badge variant="success" dot>Active</Badge>
+                      <Badge variant="success" dot>{t('success')}</Badge>
                     </div>
                   </div>
                 </CardBody>
               </Card>
 
               <Card>
-                <CardHeader><CardTitle>Data Privacy</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('security')}</CardTitle></CardHeader>
                 <CardBody className="space-y-2">
-                  <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExportOrgData}>Export Organization Data</Button>
-                  <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExportUserData}>Export User Data</Button>
-                  <Button variant="danger" size="sm" onClick={handleRequestDeletion}>Request Data Deletion</Button>
+                  <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExportOrgData}>{t('export')} {t('organization')}</Button>
+                  <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExportUserData}>{t('export')} {t('documents')}</Button>
+                  <Button variant="danger" size="sm" onClick={handleRequestDeletion}>{t('delete')} {t('documents')}</Button>
                 </CardBody>
               </Card>
             </div>
@@ -525,10 +527,10 @@ export function SettingsPage() {
 
           {tab === 'language' && (
             <Card>
-              <CardHeader><CardTitle>Language & Region</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t('language')}</CardTitle></CardHeader>
               <CardBody className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Interface Language</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('language')}</label>
                   <div className="grid grid-cols-3 gap-2">
                     {([
                       { code: 'en' as Locale, label: 'English' },
@@ -550,7 +552,7 @@ export function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Timezone</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('language')}</label>
                   <select
                     className="w-full h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-700 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
                     value={orgTimezone}
@@ -562,7 +564,7 @@ export function SettingsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Date Format</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('language')}</label>
                   <select
                     className="w-full h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm text-neutral-700 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
                     value={dateFormat}
@@ -574,7 +576,7 @@ export function SettingsPage() {
                   </select>
                 </div>
                 <p className="text-xs text-neutral-400">
-                  SADI PRO supports RTL and LTR layouts. Arabic interface switches automatically to right-to-left layout.
+                  {t('language')} {t('language')}
                 </p>
               </CardBody>
             </Card>
@@ -586,7 +588,7 @@ export function SettingsPage() {
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
-            <h2 className="text-lg font-bold text-neutral-900 mb-4">Select a Plan</h2>
+            <h2 className="text-lg font-bold text-neutral-900 mb-4">{t('currentPlan')}</h2>
             <div className="space-y-3">
               {plans.map((plan) => (
                 <div
@@ -599,7 +601,7 @@ export function SettingsPage() {
                   <div>
                     <p className="text-sm font-bold text-neutral-900">{plan.name}</p>
                     <p className="text-xs text-neutral-500 mt-1">
-                      {plan.tier === 'enterprise' ? 'Custom pricing' : `$${billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice}/mo`}
+                      {plan.tier === 'enterprise' ? t('currentPlan') : `$${billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice}/mo`}
                     </p>
                   </div>
                   <Button
@@ -608,19 +610,19 @@ export function SettingsPage() {
                     disabled={plan.tier === currentPlan.tier}
                     onClick={() => {
                       if (plan.tier === 'enterprise') {
-                        toast('info', 'Please contact sales for Enterprise plan.');
+                        toast('info', t('currentPlan'));
                       } else if (plan.tier !== currentPlan.tier) {
                         handlePlanSelect(plan.tier);
                       }
                     }}
                   >
-                    {plan.tier === currentPlan.tier ? 'Current' : plan.tier === 'enterprise' ? 'Contact Sales' : 'Select'}
+                    {plan.tier === currentPlan.tier ? t('currentPlan') : plan.tier === 'enterprise' ? t('view') : t('upgrade')}
                   </Button>
                 </div>
               ))}
             </div>
             <div className="mt-4 flex justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setShowPlanModal(false)}>Close</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowPlanModal(false)}>{t('close')}</Button>
             </div>
           </div>
         </div>

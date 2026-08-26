@@ -25,6 +25,7 @@ import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { useStore } from '@/store/StoreContext';
 import { useAuth } from '@/lib/auth';
 import { type PageKey } from '@/components/layout/Sidebar';
+import { useTranslation } from '@/lib/i18n';
 import {
   statusConfig,
   typeConfig,
@@ -51,6 +52,7 @@ const activityIcons: Record<string, typeof Upload> = {
 };
 
 export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps) {
+  const { t } = useTranslation();
   const { documents, jobs, activity, usage, departments, isLoading } = useStore();
   const { user } = useAuth();
 
@@ -73,11 +75,11 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-neutral-500">Welcome back, {user?.name?.split(' ')[0] || 'User'}. Here's what needs your attention.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('dashboard')}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{t('welcomeBack')}, {user?.name?.split(' ')[0] || 'User'}. {t('recentActivity')}.</p>
         </div>
         <Button icon={<Upload className="h-4 w-4" />} onClick={() => onNavigate('documents')}>
-          Upload Documents
+          {t('uploadDocuments')}
         </Button>
       </div>
 
@@ -86,11 +88,11 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
         <div role="alert" className="flex items-center gap-3 rounded-xl border border-warning-200 bg-warning-50 px-4 py-3">
           <AlertCircle className="h-5 w-5 text-warning-600 shrink-0" />
           <div className="flex-1 text-sm text-warning-800">
-            {failedJobs.length > 0 && <span><strong>{failedJobs.length}</strong> processing job{failedJobs.length > 1 ? 's' : ''} failed. </span>}
-            {needsReview.length > 0 && <span><strong>{needsReview.length}</strong> document{needsReview.length > 1 ? 's' : ''} pending review.</span>}
+            {failedJobs.length > 0 && <span><strong>{failedJobs.length}</strong> {t('processing')} {t('error')}. </span>}
+            {needsReview.length > 0 && <span><strong>{needsReview.length}</strong> {t('needsReview')}.</span>}
           </div>
           <Button variant="outline" size="sm" onClick={() => onNavigate(failedJobs.length > 0 ? 'processing' : 'documents')}>
-            {failedJobs.length > 0 ? `View ${failedJobs.length} failed` : `Review ${needsReview.length} docs`}
+            {failedJobs.length > 0 ? `${t('view')} ${failedJobs.length} ${t('error')}` : `${t('view')} ${needsReview.length} ${t('documents')}`}
           </Button>
         </div>
       )}
@@ -104,33 +106,33 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<FileText className="h-5 w-5" />}
-          label="Total Documents"
+          label={t('totalDocuments')}
           value={documents.length.toLocaleString()}
-          sub={`${completedDocs.length} completed`}
+          sub={`${completedDocs.length} ${t('success')}`}
           color="primary"
           onClick={() => onNavigate('documents')}
         />
         <StatCard
           icon={<Cpu className="h-5 w-5" />}
-          label="Processing"
+          label={t('processing')}
           value={processingDocs.length}
-          sub={`${jobs.length} active jobs`}
+          sub={`${jobs.length} ${t('processingQueue')}`}
           color="accent"
           onClick={() => onNavigate('processing')}
         />
         <StatCard
           icon={<AlertCircle className="h-5 w-5" />}
-          label="Needs Review"
+          label={t('needsReview')}
           value={needsReview.length}
-          sub="Pending approval"
+          sub={t('needsReview')}
           color="warning"
           onClick={() => onNavigate('documents')}
         />
         <StatCard
           icon={<CalendarClock className="h-5 w-5" />}
-          label="Expiring Soon"
+          label={t('expiringSoon')}
           value={expiringSoon.length}
-          sub="Within 60 days"
+          sub={t('expiringSoon')}
           color="error"
           onClick={() => onNavigate('documents')}
         />
@@ -144,12 +146,12 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Recent Documents</CardTitle>
+                <CardTitle>{t('allDocuments')}</CardTitle>
                 <button
                   onClick={() => onNavigate('documents')}
                   className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700"
                 >
-                  View all <ChevronRight className="h-3.5 w-3.5" />
+                  {t('view')} <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
             </CardHeader>
@@ -189,37 +191,37 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary-600" />
-                <CardTitle>AI Insights</CardTitle>
+                <CardTitle>{t('aiInsights')}</CardTitle>
               </div>
             </CardHeader>
             <CardBody className="space-y-3">
               {onHold.length > 0 && (
                 <InsightRow
                   icon={<Shield className="h-4 w-4 text-error-600" />}
-                  text={`${onHold.length} document${onHold.length > 1 ? 's are' : ' is'} on Legal Hold and cannot be disposed.`}
-                  action="View"
+                  text={`${onHold.length} ${t('legalHolds')}`}
+                  action={t('view')}
                   onClick={() => onNavigate('compliance')}
                 />
               )}
               {expiringSoon.length > 0 && (
                 <InsightRow
                   icon={<CalendarClock className="h-4 w-4 text-warning-600" />}
-                  text={`${expiringSoon[0].title} expires in ${Math.ceil((new Date(expiringSoon[0].expiresAt!).getTime() - Date.now()) / 86400000)} days. Review renewal terms.`}
-                  action="Review"
+                  text={`${expiringSoon[0].title} ${t('expiringSoon')}`}
+                  action={t('view')}
                   onClick={() => onOpenDocument(expiringSoon[0])}
                 />
               )}
               <InsightRow
                 icon={<TrendingUp className="h-4 w-4 text-success-600" />}
-                text={`${completedDocs.length} document${completedDocs.length !== 1 ? 's' : ''} processed and classified. ${documents.length - completedDocs.length} still in pipeline.`}
-                action="View"
+                text={`${completedDocs.length} ${t('documents')} ${t('success')}. ${documents.length - completedDocs.length} ${t('processingQueue')}.`}
+                action={t('view')}
                 onClick={() => onNavigate('documents')}
               />
               {departments.length > 0 && (
                 <InsightRow
                   icon={<Sparkles className="h-4 w-4 text-primary-600" />}
-                  text={`${departments.length} department${departments.length !== 1 ? 's' : ''} configured. Organize documents by department for better search.`}
-                  action="Manage"
+                  text={`${departments.length} ${t('department')} ${t('success')}`}
+                  action={t('view')}
                   onClick={() => onNavigate('team')}
                 />
               )}
@@ -229,7 +231,7 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
           {/* Departments */}
           <Card>
             <CardHeader>
-              <CardTitle>Documents by Department</CardTitle>
+              <CardTitle>{t('documents')} {t('department')}</CardTitle>
             </CardHeader>
             <CardBody className="space-y-3">
               {departments.map((dept) => {
@@ -255,27 +257,27 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
           {/* Usage */}
           <Card>
             <CardHeader>
-              <CardTitle>Usage</CardTitle>
+              <CardTitle>{t('storageUsed')}</CardTitle>
             </CardHeader>
             <CardBody>
               <div className="flex justify-center mb-6">
-                <ProgressRing value={storagePct} label="Storage" size={130} />
+                <ProgressRing value={storagePct} label={t('storageUsed')} size={130} />
               </div>
               <div className="space-y-4">
-                <UsageRow label="Documents" used={usage.documentCount} limit={usage.documentLimit} pct={docPct} />
-                <UsageRow label="Users" used={usage.userCount} limit={usage.userLimit} pct={userPct} />
-                <UsageRow label="AI Tokens" used={usage.aiTokensUsed} limit={usage.aiTokensLimit} pct={aiPct} formatVal={(v) => v.toLocaleString()} />
+                <UsageRow label={t('documents')} used={usage.documentCount} limit={usage.documentLimit} pct={docPct} />
+                <UsageRow label={t('team')} used={usage.userCount} limit={usage.userLimit} pct={userPct} />
+                <UsageRow label={t('aiInsights')} used={usage.aiTokensUsed} limit={usage.aiTokensLimit} pct={aiPct} formatVal={(v) => v.toLocaleString()} />
               </div>
               <div className="mt-5 rounded-lg bg-neutral-50 p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-500">Current Plan</span>
-                  <Badge variant="default">Business</Badge>
+                  <span className="text-xs text-neutral-500">{t('currentPlan')}</span>
+                  <Badge variant="default">{t('currentPlan')}</Badge>
                 </div>
                 <button
                   onClick={() => onNavigate('settings')}
                   className="mt-2 w-full text-xs font-medium text-primary-600 hover:text-primary-700"
                 >
-                  Manage subscription →
+                  {t('upgrade')} →
                 </button>
               </div>
             </CardBody>
@@ -286,7 +288,7 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-neutral-500" />
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle>{t('recentActivity')}</CardTitle>
               </div>
             </CardHeader>
             <CardBody className="p-0">
@@ -294,8 +296,8 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
                 {activity.length === 0 ? (
                   <EmptyState
                     icon={<Activity className="h-6 w-6" />}
-                    title="No activity yet"
-                    description="Actions will appear here as your team works."
+                    title={t('activity')}
+                    description={t('recentActivity')}
                   />
                 ) : (
                   <div className="divide-y divide-neutral-50">
@@ -338,7 +340,7 @@ function StatCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
+  value: number | string;
   sub: string;
   color: 'primary' | 'accent' | 'warning' | 'error';
   onClick: () => void;

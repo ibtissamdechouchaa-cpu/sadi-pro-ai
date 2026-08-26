@@ -19,6 +19,7 @@ import { roleConfig, cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
+import { useTranslation } from '@/lib/i18n';
 import type { RoleKey } from '@/types';
 
 const permissions = [
@@ -48,6 +49,7 @@ const rolePermissions: Record<RoleKey, string[]> = {
 };
 
 export function TeamPage() {
+  const { t } = useTranslation();
   const { users, departments, refreshData } = useStore();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
@@ -71,7 +73,7 @@ export function TeamPage() {
       setShowInvite(false);
       await refreshData();
     } catch (e: any) {
-      toast('error', e.message || 'Failed to send invite');
+      toast('error', e.message || t('error'));
     }
   };
 
@@ -81,18 +83,18 @@ export function TeamPage() {
       await refreshData();
       setRoleDropdownForUser(null);
     } catch (e: any) {
-      toast('error', e.message || 'Failed to update role');
+      toast('error', e.message || t('error'));
     }
   };
 
   const handleRemoveUser = async (userId: string) => {
-    if (!window.confirm('Are you sure you want to remove this team member?')) return;
+    if (!window.confirm(`${t('delete')} ${t('team')}?`)) return;
     try {
       await api.patch(`/api/data/users/${userId}`, { isActive: false });
       await refreshData();
-      toast('success', 'Member removed.');
+      toast('success', t('documentDeleted'));
     } catch (e: any) {
-      toast('error', e.message || 'Failed to remove user');
+      toast('error', e.message || t('error'));
     }
   };
 
@@ -104,7 +106,7 @@ export function TeamPage() {
       setShowCustomRoleModal(false);
       setCustomRoleUserId(null);
     } catch (e: any) {
-      toast('error', e.message || 'Failed to update role');
+      toast('error', e.message || t('error'));
     }
   };
 
@@ -118,17 +120,17 @@ export function TeamPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Team & Roles</h1>
-          <p className="mt-1 text-sm text-neutral-500">{users.length} members across {departments.length} departments.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('team')}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{users.length} {t('team')} {t('department')}.</p>
         </div>
         <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowInvite(true)}>
-          Invite Member
+          {t('team')}
         </Button>
       </div>
 
       {/* Members */}
       <Card>
-        <CardHeader><CardTitle>Members</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t('team')}</CardTitle></CardHeader>
         <CardBody className="p-0">
           <div className="divide-y divide-neutral-50">
             {users.map((user) => {
@@ -180,7 +182,7 @@ export function TeamPage() {
                             onClick={() => { setRoleDropdownForUser(null); openCustomRoleModal(user.id, user.role); }}
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
                           >
-                            Custom Role...
+                            {t('edit')}...
                           </button>
                         </div>
                       </div>
@@ -196,7 +198,7 @@ export function TeamPage() {
                     <button
                       onClick={() => handleRemoveUser(user.id)}
                       className="rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-500"
-                      title="Remove member"
+                      title={t('delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -212,8 +214,8 @@ export function TeamPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Roles & Permissions</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => { openCustomRoleModal(users[0]?.id || '', users[0]?.role || 'viewer'); }}>Custom Role</Button>
+            <CardTitle>{t('team')} {t('permissions')}</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => { openCustomRoleModal(users[0]?.id || '', users[0]?.role || 'viewer'); }}>{t('edit')}</Button>
           </div>
         </CardHeader>
         <CardBody className="p-0">
@@ -221,7 +223,7 @@ export function TeamPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-neutral-100 bg-neutral-50/50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">Role</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-neutral-500">{t('team')}</th>
                   {permissions.map((p) => (
                     <th key={p.key} className="px-3 py-3 text-center text-xs font-semibold text-neutral-500" title={p.label}>
                       <span className="hidden lg:inline">{p.label}</span>
@@ -261,31 +263,31 @@ export function TeamPage() {
       <Modal
         open={showInvite}
         onClose={() => setShowInvite(false)}
-        title="Invite Team Member"
+        title={t('team')}
         footer={
           <>
-            <Button variant="outline" onClick={() => setShowInvite(false)}>Cancel</Button>
-            <Button onClick={handleSendInvite} disabled={!email.trim()}>Send Invite</Button>
+            <Button variant="outline" onClick={() => setShowInvite(false)}>{t('cancel')}</Button>
+            <Button onClick={handleSendInvite} disabled={!email.trim()}>{t('save')}</Button>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('email')}</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="colleague@company.com"
+                placeholder={t('email')}
                 className="w-full h-10 rounded-lg border border-neutral-200 pl-10 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none transition-colors"
                 autoFocus
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('team')}</label>
             <div className="grid grid-cols-2 gap-2">
               {inviteRoles.map((r) => (
                 <button
@@ -308,10 +310,10 @@ export function TeamPage() {
       <Modal
         open={showPerms !== null}
         onClose={() => setShowPerms(null)}
-        title={showPerms ? `${roleConfig[showPerms].label} Permissions` : ''}
+        title={showPerms ? `${roleConfig[showPerms].label} ${t('permissions')}` : ''}
         size="md"
         footer={
-          <Button variant="outline" onClick={() => setShowPerms(null)}>Close</Button>
+          <Button variant="outline" onClick={() => setShowPerms(null)}>{t('close')}</Button>
         }
       >
         <div className="space-y-2">
@@ -331,16 +333,16 @@ export function TeamPage() {
       <Modal
         open={showCustomRoleModal}
         onClose={() => { setShowCustomRoleModal(false); setCustomRoleUserId(null); }}
-        title="Assign Custom Role"
+        title={t('edit')}
         footer={
           <>
-            <Button variant="outline" onClick={() => { setShowCustomRoleModal(false); setCustomRoleUserId(null); }}>Cancel</Button>
-            <Button onClick={handleCustomRoleSubmit}>Save Role</Button>
+            <Button variant="outline" onClick={() => { setShowCustomRoleModal(false); setCustomRoleUserId(null); }}>{t('cancel')}</Button>
+            <Button onClick={handleCustomRoleSubmit}>{t('save')}</Button>
           </>
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-neutral-600">Select a role to assign to this team member:</p>
+          <p className="text-sm text-neutral-600">{t('team')} {t('edit')}:</p>
           <div className="space-y-2">
             {inviteRoles.map((r) => (
               <button
@@ -362,7 +364,7 @@ export function TeamPage() {
             ))}
           </div>
           <div className="rounded-lg border border-neutral-100 p-3">
-            <p className="text-xs font-medium text-neutral-500 mb-2">Permissions for {roleConfig[customRoleSelection].label}:</p>
+            <p className="text-xs font-medium text-neutral-500 mb-2">{t('permissions')} {roleConfig[customRoleSelection].label}:</p>
             <div className="flex flex-wrap gap-1">
               {(rolePermissions[customRoleSelection] || []).map((pk) => (
                 <span key={pk} className="inline-block rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">

@@ -18,6 +18,7 @@ import { useStore } from '@/store/StoreContext';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
+import { useTranslation } from '@/lib/i18n';
 import { generateId } from '@/lib/utils';
 import type { Document } from '@/types';
 
@@ -33,6 +34,7 @@ interface Collection {
 }
 
 export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
+  const { t } = useTranslation();
   const { documents } = useStore();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -90,9 +92,9 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
       const res = await api.post('/api/data/collections', { name: suggestion.name, organizationId: user.organizationId });
       const created = res.collection || { id: generateId('col'), name: suggestion.name, organizationId: user.organizationId, createdAt: new Date().toISOString() };
       setCollections((prev) => [created, ...prev]);
-      toast('success', `"${suggestion.name}" collection created`);
+      toast('success', `"${suggestion.name}" ${t('success')}`);
     } catch (e: unknown) {
-      toast('error', e instanceof Error ? e.message : 'Failed to create collection');
+      toast('error', e instanceof Error ? e.message : t('error'));
     }
   };
 
@@ -104,9 +106,9 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
       setCollections((prev) => [created, ...prev]);
       setNewName('');
       setShowCreate(false);
-      toast('success', 'Collection created');
+      toast('success', t('success'));
     } catch (e: unknown) {
-      toast('error', e instanceof Error ? e.message : 'Failed to create collection');
+      toast('error', e instanceof Error ? e.message : t('error'));
     }
   };
 
@@ -118,20 +120,20 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
       setEditingId(null);
       setEditingName('');
     } catch (e: any) {
-      toast('error', e.message || 'Failed to rename collection');
+      toast('error', e.message || t('error'));
     }
   };
 
   const deleteCollection = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this collection?')) return;
+    if (!window.confirm(`${t('delete')} ${t('collections')}?`)) return;
     try {
       await api.delete(`/api/data/collections/${id}`);
       setCollections((prev) => prev.filter((c) => c.id !== id));
       setActiveDropdown(null);
       if (filterCollectionId === id) setFilterCollectionId(null);
-      toast('success', 'Collection deleted.');
+      toast('success', t('documentDeleted'));
     } catch (e: any) {
-      toast('error', e.message || 'Failed to delete collection');
+      toast('error', e.message || t('error'));
     }
   };
 
@@ -158,11 +160,11 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Collections</h1>
-          <p className="mt-1 text-sm text-neutral-500">Organize documents into logical groups and knowledge bases.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('collections')}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{t('collections')} {t('documents')}</p>
         </div>
         <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>
-          New Collection
+          {t('collections')}
         </Button>
       </div>
 
@@ -170,13 +172,13 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
         <div className="flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2">
           <Eye className="h-4 w-4 text-primary-600" />
           <span className="text-sm text-primary-700">
-            Viewing: {allCollections.find((c) => c.id === filterCollectionId)?.name}
+            {t('view')}: {allCollections.find((c) => c.id === filterCollectionId)?.name}
           </span>
           <button
             onClick={() => setFilterCollectionId(null)}
             className="ml-auto text-xs text-primary-600 hover:text-primary-800 underline"
           >
-            Clear filter
+            {t('close')} {t('filter')}
           </button>
         </div>
       )}
@@ -186,7 +188,7 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary-600" />
-              <CardTitle>AI Suggested Collections</CardTitle>
+              <CardTitle>{t('aiInsights')} {t('collections')}</CardTitle>
             </div>
           </CardHeader>
           <CardBody className="space-y-2">
@@ -195,10 +197,10 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
                 <FolderOpen className="h-4 w-4 text-primary-600" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-900">{s.name}</p>
-                  <p className="text-xs text-neutral-400">{s.docIds.length} documents would be added</p>
+                  <p className="text-xs text-neutral-400">{s.docIds.length} {t('documents')}</p>
                 </div>
                 <Button size="sm" variant="outline" icon={<Check className="h-3.5 w-3.5" />} onClick={() => acceptSuggestion(s)}>
-                  Create
+                  {t('save')}
                 </Button>
               </div>
             ))}
@@ -210,9 +212,9 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
         <Card>
           <EmptyState
             icon={<FolderOpen className="h-8 w-8" />}
-            title="No collections yet"
-            description="Create collections to organize documents into knowledge bases."
-            action={<Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>New Collection</Button>}
+            title={t('collections')}
+            description={t('noDocuments')}
+            action={<Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreate(true)}>{t('collections')}</Button>}
           />
         </Card>
       ) : (
@@ -244,21 +246,21 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
                             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                            Edit Name
+                            {t('edit')}
                           </button>
                           <button
                             onClick={() => { setActiveDropdown(null); setFilterCollectionId(col.id); }}
                             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                           >
                             <Eye className="h-3.5 w-3.5" />
-                            View Documents
+                            {t('view')}
                           </button>
                           <button
                             onClick={() => deleteCollection(col.id)}
                             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                            Delete
+                            {t('delete')}
                           </button>
                         </div>
                       )}
@@ -287,7 +289,7 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
                   ) : (
                     <h3 className="text-sm font-semibold text-neutral-900">{col.name}</h3>
                   )}
-                  <p className="text-xs text-neutral-400 mt-0.5">{colDocs.length} documents</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">{colDocs.length} {t('documents')}</p>
                   {colDocs.length > 0 && (
                     <div className="mt-3 space-y-1">
                       {colDocs.slice(0, 3).map((doc) => (
@@ -301,7 +303,7 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
                         </button>
                       ))}
                       {colDocs.length > 3 && (
-                        <p className="text-xs text-neutral-400 pl-2">+{colDocs.length - 3} more</p>
+                        <p className="text-xs text-neutral-400 pl-2">+{colDocs.length - 3} {t('documents')}</p>
                       )}
                     </div>
                   )}
@@ -315,28 +317,28 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
       <Modal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        title="New Collection"
+        title={t('collections')}
         footer={
           <>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={createCollection} disabled={!newName.trim()}>Create</Button>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>{t('cancel')}</Button>
+            <Button onClick={createCollection} disabled={!newName.trim()}>{t('save')}</Button>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">Collection Name</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('collections')}</label>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Legal Knowledge Base"
+              placeholder={t('collections')}
               className="w-full h-10 rounded-lg border border-neutral-200 px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none transition-colors"
               autoFocus
             />
           </div>
           <p className="text-xs text-neutral-400">
-            Collections group related documents together. AI Assistant can search within specific collections.
+            {t('collections')} {t('documents')}
           </p>
         </div>
       </Modal>

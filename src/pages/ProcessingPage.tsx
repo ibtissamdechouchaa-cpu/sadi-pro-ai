@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStore } from '@/store/StoreContext';
+import { useTranslation } from '@/lib/i18n';
 import { statusConfig, timeAgo, cn } from '@/lib/utils';
 import type { Document } from '@/types';
 
@@ -66,6 +67,7 @@ function stageOf(job: { stage: string }): PipelineStage {
 }
 
 export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
+  const { t } = useTranslation();
   const { jobs, documents, retryJob, cancelJob } = useStore();
   const [activeStage, setActiveStage] = useState<PipelineStage | null>(null);
 
@@ -94,30 +96,30 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Processing Center</h1>
-          <p className="mt-1 text-sm text-neutral-500">Monitor document processing jobs, retry failures, and track progress.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('processing')}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{t('processingQueue')} {t('documents')}</p>
         </div>
         {activeStage && (
           <Button variant="outline" size="sm" onClick={() => setActiveStage(null)}>
-            Clear filter — showing {activeStage} ({filteredJobs.length})
+            {t('close')} {t('filter')} — {activeStage} ({filteredJobs.length})
           </Button>
         )}
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatBox icon={<Clock className="h-4 w-4" />} label="Queued" value={queued.length} color="bg-neutral-100 text-neutral-600" />
-        <StatBox icon={<Cpu className="h-4 w-4" />} label="Processing" value={processing.length} color="bg-accent-50 text-accent-600" />
-        <StatBox icon={<CheckCircle2 className="h-4 w-4" />} label="Completed" value={completed.length} color="bg-success-50 text-success-600" />
-        <StatBox icon={<AlertCircle className="h-4 w-4" />} label="Failed" value={failed.length} color="bg-error-50 text-error-600" />
+        <StatBox icon={<Clock className="h-4 w-4" />} label={t('processingQueue')} value={queued.length} color="bg-neutral-100 text-neutral-600" />
+        <StatBox icon={<Cpu className="h-4 w-4" />} label={t('processing')} value={processing.length} color="bg-accent-50 text-accent-600" />
+        <StatBox icon={<CheckCircle2 className="h-4 w-4" />} label={t('success')} value={completed.length} color="bg-success-50 text-success-600" />
+        <StatBox icon={<AlertCircle className="h-4 w-4" />} label={t('error')} value={failed.length} color="bg-error-50 text-error-600" />
       </div>
 
       {/* Processing Pipeline — live, clickable */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Processing Pipeline</CardTitle>
-            <span className="text-xs text-neutral-400">{totalPipelineDocs} document{totalPipelineDocs !== 1 ? 's' : ''} in pipeline</span>
+            <CardTitle>{t('processing')} {t('processingQueue')}</CardTitle>
+            <span className="text-xs text-neutral-400">{totalPipelineDocs} {t('documents')} {t('processingQueue')}</span>
           </div>
         </CardHeader>
         <CardBody>
@@ -138,7 +140,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
                           ? 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100'
                           : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200',
                     )}
-                    title={`${count} document${count !== 1 ? 's' : ''} in ${stage}${hasDocs ? ' — click to filter' : ''}`}
+                    title={`${count} ${t('documents')} ${stage}`}
                   >
                     {stage}
                     <span className={cn(
@@ -154,8 +156,8 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
             })}
           </div>
           <p className="mt-3 text-xs text-neutral-400">
-            Each file goes through this pipeline asynchronously. Click a stage to filter. Failed jobs only retry the failed stage, not the entire pipeline.
-            {activeStage && <span className="text-primary-600 font-medium"> Filtered to {activeStage}.</span>}
+            {t('processing')} {t('processingQueue')} {t('documents')}
+            {activeStage && <span className="text-primary-600 font-medium"> {t('filter')} {activeStage}.</span>}
           </p>
         </CardBody>
       </Card>
@@ -165,18 +167,18 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
         <Card>
           <EmptyState
             icon={<Cpu className="h-8 w-8" />}
-            title="No processing jobs"
-            description="Upload documents to see processing jobs appear here. Jobs are processed asynchronously in the background."
+            title={t('processing')}
+            description={t('processingQueue')}
           />
         </Card>
       ) : filteredJobs.length === 0 && activeStage ? (
         <Card>
-          <EmptyState icon={<FileText className="h-8 w-8" />} title={`No documents in ${activeStage}`} description="No jobs are currently in this pipeline stage." />
+          <EmptyState icon={<FileText className="h-8 w-8" />} title={t('noDocuments')} description={t('noDocuments')} />
         </Card>
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Processing Queue {activeStage ? `— ${activeStage}` : ''}</CardTitle>
+            <CardTitle>{t('processingQueue')} {activeStage ? `— ${activeStage}` : ''}</CardTitle>
           </CardHeader>
           <CardBody className="p-0">
             <div className="divide-y divide-neutral-50">
@@ -189,7 +191,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
                       onClick={() => linkedDoc && onOpenDocument?.(linkedDoc)}
                       disabled={!linkedDoc}
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100 ${linkedDoc ? 'hover:bg-primary-50 cursor-pointer' : ''}`}
-                      title={linkedDoc ? 'Open document' : undefined}
+                      title={linkedDoc ? t('view') : undefined}
                     >
                       <FileText className={`h-4 w-4 ${linkedDoc ? 'text-primary-500' : 'text-neutral-500'}`} />
                     </button>
@@ -204,7 +206,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
                           {statusConfig[job.stage]?.label || job.stage}
                         </Badge>
                       </div>
-                      <p className="text-xs text-neutral-400 mt-0.5">Started {timeAgo(job.startedAt)}</p>
+                      <p className="text-xs text-neutral-400 mt-0.5">{t('uploadedAt')} {timeAgo(job.startedAt)}</p>
 
                       {job.stage !== 'queued' && job.stage !== 'failed' && (
                         <div className="mt-2.5">
@@ -235,7 +237,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
                           icon={<RefreshCw className="h-3.5 w-3.5" />}
                           onClick={() => retryJob(job.id)}
                         >
-                          Retry
+                          {t('confirm')}
                         </Button>
                       )}
                       {(job.stage === 'queued' || job.stage === 'processing' || job.stage === 'extracting' || job.stage === 'indexing') && (
@@ -245,7 +247,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
                           icon={<X className="h-3.5 w-3.5" />}
                           onClick={() => cancelJob(job.id)}
                         >
-                          Cancel
+                          {t('cancel')}
                         </Button>
                       )}
                     </div>

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Sidebar, type PageKey } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { useTranslation } from '@/lib/i18n';
 
 interface AppShellProps {
   current: PageKey;
@@ -10,6 +11,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ current, onNavigate, children, onHome }: AppShellProps) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('sadi_sidebar_collapsed') === '1'; } catch { return false; }
   });

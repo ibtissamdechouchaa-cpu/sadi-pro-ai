@@ -3,6 +3,7 @@ import { Bell, Search, Menu, ChevronDown, LogOut, User as UserIcon, Settings } f
 import { Avatar } from '@/components/ui/Avatar';
 import { useStore } from '@/store/StoreContext';
 import { useAuth } from '@/lib/auth';
+import { useTranslation } from '@/lib/i18n';
 import { roleConfig, cn, timeAgo } from '@/lib/utils';
 
 interface TopbarProps {
@@ -11,6 +12,7 @@ interface TopbarProps {
 }
 
 export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
+  const { t } = useTranslation();
   const { currentUser, notifications, markNotificationRead, markAllNotificationsRead } = useStore();
   const { signOut } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -50,7 +52,7 @@ export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
       <div className="flex items-center gap-3 flex-1">
         <button
           onClick={onToggleSidebar}
-          aria-label="Toggle sidebar"
+          aria-label={t('view')}
           className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 transition-colors focus-ring"
         >
           <Menu className="h-5 w-5" />
@@ -60,7 +62,7 @@ export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
           className="hidden md:flex items-center gap-2.5 h-9 w-72 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-sm text-neutral-400 hover:border-neutral-300 hover:bg-white transition-colors focus-ring"
         >
           <Search className="h-4 w-4" />
-          <span>Search documents, ask AI...</span>
+          <span>{t('search')}</span>
           <kbd className="ml-auto rounded border border-neutral-200 bg-white px-1.5 py-0.5 text-[10px] font-mono text-neutral-400">⌘K</kbd>
         </button>
       </div>
@@ -81,19 +83,19 @@ export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
           {notifOpen && (
             <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-neutral-200 bg-white shadow-elevated animate-slide-up z-50">
               <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-                <span className="text-sm font-semibold text-neutral-900">Notifications</span>
+                <span className="text-sm font-semibold text-neutral-900">{t('notifications')}</span>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllNotificationsRead}
                     className="text-xs font-medium text-primary-600 hover:text-primary-700"
                   >
-                    Mark all read
+                    {t('view')}
                   </button>
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifications.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-neutral-400">No notifications</div>
+                  <div className="py-8 text-center text-sm text-neutral-400">{t('notifications')}</div>
                 ) : (
                   notifications.map((n) => (
                     <button
@@ -138,13 +140,13 @@ export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
               </div>
               <div className="py-1.5">
                 <button onClick={() => { onNavigate('settings'); setProfileOpen(false); }} className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                  <UserIcon className="h-4 w-4" /> My Profile
+                  <UserIcon className="h-4 w-4" /> {t('view')}
                 </button>
                 <button
                   onClick={() => { onNavigate('settings'); setProfileOpen(false); }}
                   className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors"
                 >
-                  <Settings className="h-4 w-4" /> Settings
+                  <Settings className="h-4 w-4" /> {t('settings')}
                 </button>
               </div>
               <div className="border-t border-neutral-100 py-1.5">
@@ -152,7 +154,7 @@ export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
                   onClick={signOut}
                   className="flex w-full items-center gap-2.5 px-4 py-2 text-sm text-error-600 hover:bg-error-50 transition-colors"
                 >
-                  <LogOut className="h-4 w-4" /> Sign Out
+                  <LogOut className="h-4 w-4" /> {t('signOut')}
                 </button>
               </div>
             </div>

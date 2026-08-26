@@ -18,6 +18,7 @@ import { ReasoningTrace } from '@/components/ReasoningTrace';
 import type { ReasoningStep } from '@/types';
 import { useAuth } from '@/lib/auth';
 import { useStore } from '@/store/StoreContext';
+import { useTranslation } from '@/lib/i18n';
 import {
   searchDocuments,
   saveSearchSuggestion,
@@ -63,6 +64,7 @@ function highlightSnippet(snippet: string, query: string): { __html: string } {
 }
 
 export function SearchPage({ onOpenDocument }: SearchPageProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { documents } = useStore();
   const [query, setQuery] = useState('');
@@ -137,13 +139,13 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
         setAnswerReasoningSummary(data.reasoningSummary);
       } else {
         setAnswer(rows.length > 0
-          ? rows[0].snippet || `Found ${rows.length} results for "${q}".`
-          : "I couldn't find documents matching your query in your organization's library.");
+          ? rows[0].snippet || `${t('search')} ${rows.length} ${t('documents')}`
+          : t('noSearchResults'));
       }
     } catch {
       setAnswer(rows.length > 0
-        ? rows[0].snippet || `Found ${rows.length} results for "${q}".`
-        : "I couldn't find documents matching your query in your organization's library.");
+        ? rows[0].snippet || `${t('search')} ${rows.length} ${t('documents')}`
+        : t('noSearchResults'));
     }
 
     setSearching(false);
@@ -172,8 +174,8 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Smart Search</h1>
-        <p className="mt-1 text-sm text-neutral-500">Search across all documents using natural language, keywords, or semantic matching.</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('searchPage')}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t('search')} {t('documents')}</p>
       </div>
 
       <div className="relative">
@@ -185,11 +187,11 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') performSearch(query); if (e.key === 'Escape') setQuery(''); }}
-            placeholder="Ask a question or search documents..."
+            placeholder={t('search')}
             className="w-full h-14 rounded-xl border border-neutral-200 bg-white pl-12 pr-32 text-base text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none transition-all shadow-card"
           />
           {query && !searching && (
-            <button onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-28 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600">
+            <button onClick={() => setQuery('')} aria-label={t('close')} className="absolute right-28 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -201,14 +203,14 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
             isLoading={searching}
             icon={!searching ? <ArrowRight className="h-4 w-4" /> : undefined}
           >
-            {searching ? 'Searching...' : 'Search'}
+            {searching ? t('loading') : t('search')}
           </Button>
         </div>
       </div>
 
       {!hasSearched && (
         <div className="space-y-3">
-          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Try asking</p>
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{t('search')}</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
               <button
@@ -231,7 +233,7 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-600 text-white">
                 <Sparkles className="h-4 w-4" />
               </div>
-              <CardTitle>AI Answer</CardTitle>
+              <CardTitle>{t('aiInsights')}</CardTitle>
             </div>
           </CardHeader>
           <CardBody>
@@ -239,7 +241,7 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
             <p className="text-sm text-neutral-700 leading-relaxed mt-3"><TypewriterText text={answer} /></p>
             {sources.length > 0 && (
               <div className="mt-4 pt-4 border-t border-primary-100">
-                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Sources</p>
+                <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">{t('documents')}</p>
                 <div className="space-y-1.5">
                   {sources.map((src, i) => {
                     const row = results.find((r) => r.id === src.docId);
@@ -265,7 +267,7 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-neutral-500">
-              {results.length} result{results.length !== 1 ? 's' : ''} found
+              {results.length} {t('search')} {t('documents')}
             </p>
           </div>
 
@@ -273,8 +275,8 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
             <Card>
               <EmptyState
                 icon={<Search className="h-8 w-8" />}
-                title="No results found"
-                description="Try different keywords or check your spelling. You can also ask questions in natural language."
+                title={t('noSearchResults')}
+                description={t('noSearchResults')}
               />
             </Card>
           ) : (
@@ -296,7 +298,7 @@ export function SearchPage({ onOpenDocument }: SearchPageProps) {
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-semibold text-neutral-900">{result.title}</h3>
                             <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-primary-50 text-primary-700">
-                              {result.rank > 0.8 ? 'High' : result.rank > 0.5 ? 'Medium' : 'Low'} match
+                              {result.rank > 0.8 ? t('success') : result.rank > 0.5 ? t('view') : t('loading')} {t('search')}
                             </span>
                           </div>
                           <p

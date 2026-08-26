@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { useStore } from '@/store/StoreContext';
+import { useTranslation } from '@/lib/i18n';
 import { typeConfig, percentage, cn } from '@/lib/utils';
 import type { PageKey } from '@/components/layout/Sidebar';
 
@@ -20,6 +21,7 @@ interface AnalyticsPageProps {
 }
 
 export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
+  const { t } = useTranslation();
   const { documents, departments, usage, activity } = useStore();
 
   const docsByType = Object.entries(
@@ -63,16 +65,16 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Analytics</h1>
-        <p className="mt-1 text-sm text-neutral-500">Insights into document distribution, processing performance, and usage trends.</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('analytics')}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t('analytics')} {t('documents')} {t('analytics')}.</p>
       </div>
 
       {/* Overview stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon={<FileText className="h-5 w-5" />} label="Total Documents" value={documents.length} color="bg-primary-50 text-primary-600" />
-        <StatCard icon={<Cpu className="h-5 w-5" />} label="AI Tokens Used" value={usage.aiTokensUsed.toLocaleString()} sub={`${percentage(usage.aiTokensUsed, usage.aiTokensLimit)}% of limit`} color="bg-accent-50 text-accent-600" />
-        <StatCard icon={<HardDrive className="h-5 w-5" />} label="Storage Used" value={`${usage.storageUsedGB} GB`} sub={`of ${usage.storageLimitGB} GB`} color="bg-success-50 text-success-600" />
-        <StatCard icon={<Activity className="h-5 w-5" />} label="Total Actions" value={totalActivity} sub="Last 30 days" color="bg-warning-50 text-warning-600" />
+        <StatCard icon={<FileText className="h-5 w-5" />} label={t('totalDocuments')} value={documents.length} color="bg-primary-50 text-primary-600" />
+        <StatCard icon={<Cpu className="h-5 w-5" />} label={t('aiInsights')} value={usage.aiTokensUsed.toLocaleString()} sub={`${percentage(usage.aiTokensUsed, usage.aiTokensLimit)}%`} color="bg-accent-50 text-accent-600" />
+        <StatCard icon={<HardDrive className="h-5 w-5" />} label={t('storageUsed')} value={`${usage.storageUsedGB} GB`} sub={`of ${usage.storageLimitGB} GB`} color="bg-success-50 text-success-600" />
+        <StatCard icon={<Activity className="h-5 w-5" />} label={t('activity')} value={totalActivity} sub={t('activity')} color="bg-warning-50 text-warning-600" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -81,12 +83,12 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-neutral-500" />
-              <CardTitle>Documents by Type</CardTitle>
+              <CardTitle>{t('documents')} {t('documentType')}</CardTitle>
             </div>
           </CardHeader>
           <CardBody className="space-y-3">
             {docsByType.length === 0 ? (
-              <p className="text-sm text-neutral-400 text-center py-4">No documents yet</p>
+              <p className="text-sm text-neutral-400 text-center py-4">{t('noDocuments')}</p>
             ) : docsByType.map(([type, count]) => (
               <button key={type} onClick={() => onNavigate?.('documents')} className="flex w-full items-center gap-3 rounded-lg px-2 py-1 -mx-2 hover:bg-neutral-50 transition-colors text-left">
                 <span className="text-sm text-neutral-600 w-28 truncate">{typeConfig[type as keyof typeof typeConfig]?.label || type}</span>
@@ -104,7 +106,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-neutral-500" />
-              <CardTitle>Documents by Department</CardTitle>
+              <CardTitle>{t('documents')} {t('department')}</CardTitle>
             </div>
           </CardHeader>
           <CardBody className="space-y-3">
@@ -123,7 +125,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
 
         {/* Documents by Status */}
         <Card>
-          <CardHeader><CardTitle>Processing Status</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('status')}</CardTitle></CardHeader>
           <CardBody>
             <div className="flex flex-wrap gap-3">
               {docsByStatus.map(([status, count]) => (
@@ -138,7 +140,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
 
         {/* Language distribution */}
         <Card>
-          <CardHeader><CardTitle>Language Distribution</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('language')}</CardTitle></CardHeader>
           <CardBody>
             <div className="flex items-center justify-around">
               {docsByLanguage.map(([lang, count]) => (
@@ -149,7 +151,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
                     strokeWidth={6}
                     label={lang.toUpperCase()}
                   />
-                  <p className="text-xs text-neutral-500 mt-2">{count} docs</p>
+                  <p className="text-xs text-neutral-500 mt-2">{count} {t('documents')}</p>
                 </div>
               ))}
             </div>
@@ -161,7 +163,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-neutral-500" />
-              <CardTitle>Activity Breakdown</CardTitle>
+              <CardTitle>{t('activity')}</CardTitle>
             </div>
           </CardHeader>
           <CardBody>
@@ -181,14 +183,14 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary-600" />
-              <CardTitle>AI Usage</CardTitle>
+              <CardTitle>{t('aiInsights')}</CardTitle>
             </div>
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-neutral-600">AI Tokens</span>
+                  <span className="text-sm text-neutral-600">{t('aiInsights')}</span>
                   <span className="text-xs text-neutral-400">{percentage(usage.aiTokensUsed, usage.aiTokensLimit)}%</span>
                 </div>
                 <ProgressBar value={percentage(usage.aiTokensUsed, usage.aiTokensLimit)} color="primary" />
@@ -196,7 +198,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-neutral-600">OCR Pages</span>
+                  <span className="text-sm text-neutral-600">{t('aiInsights')}</span>
                   <span className="text-xs text-neutral-400">{percentage(usage.ocrPagesUsed, usage.ocrPagesLimit)}%</span>
                 </div>
                 <ProgressBar value={percentage(usage.ocrPagesUsed, usage.ocrPagesLimit)} color="accent" />
@@ -204,7 +206,7 @@ export function AnalyticsPage({ onNavigate }: AnalyticsPageProps) {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-neutral-600">Storage</span>
+                  <span className="text-sm text-neutral-600">{t('storageUsed')}</span>
                   <span className="text-xs text-neutral-400">{percentage(usage.storageUsedGB, usage.storageLimitGB)}%</span>
                 </div>
                 <ProgressBar value={percentage(usage.storageUsedGB, usage.storageLimitGB)} color="success" />
