@@ -20,7 +20,7 @@ model Organization {
   subscriptionState String    @default("trialing")
   trialEndsAt       DateTime?
   maxUsers          Int       @default(5)
-  maxStorageBytes   BigInt    @default(26843545600)
+  maxStorageBytes   BigInt    @default(209715200)
   maxDocuments      Int       @default(5000)
   settings          Json      @default("{}")
   createdAt         DateTime  @default(now())

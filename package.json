@@ -3,7 +3,7 @@
   "private": true,
   "version": "2.0.0",
   "author": "Aymen Rouagha <aymen@sadi.pro>",
-  "description": "SADI PRO — AI-powered Document Intelligence & Records Management Platform",
+  "description": "SADI PRO — AI-powered B2B Archive Document Intelligence · Records Management · Smart Archive",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -19,6 +19,8 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1118.0",
+    "@aws-sdk/s3-request-presigner": "^3.1118.0",
     "@cyntler/react-doc-viewer": "^1.17.1",
     "@doc-preview/angular": "^1.2.0",
     "@doc-preview/core": "^1.2.0",

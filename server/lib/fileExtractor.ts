@@ -1,8 +1,5 @@
-import { readFile } from "fs/promises";
-import { join } from "path";
 import mammoth from "mammoth";
-
-const UPLOAD_DIR = join(process.cwd(), "uploads");
+import { downloadFromR2 } from "./r2.js";
 
 const IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "tif"]);
 
@@ -45,13 +42,12 @@ export async function extractFileText(
 ): Promise<{ text: string; isImage: boolean; imageData?: { base64: string; mime: string } }> {
   if (!filePath) return { text: title, isImage: false };
 
-  const fullPath = join(UPLOAD_DIR, filePath);
   const ext = (fileType || "").toLowerCase();
 
   // Images → return base64 for Gemini Vision
   if (IMAGE_TYPES.has(ext)) {
     try {
-      const buf = await readFile(fullPath);
+      const buf = await downloadFromR2(filePath);
       const mime = ext === "jpg" ? "image/jpeg" : ext === "tif" || ext === "tiff" ? "image/tiff" : `image/${ext}`;
       return { text: title, isImage: true, imageData: { base64: buf.toString("base64"), mime } };
     } catch {
@@ -62,7 +58,7 @@ export async function extractFileText(
   // Read raw buffer once
   let buffer: Buffer;
   try {
-    buffer = await readFile(fullPath);
+    buffer = await downloadFromR2(filePath);
   } catch {
     return { text: title, isImage: false };
   }

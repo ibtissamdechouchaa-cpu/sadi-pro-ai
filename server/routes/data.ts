@@ -1,23 +1,15 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { authMiddleware } from "../lib/auth.js";
-import { writeFile, mkdir, readFile } from "fs/promises";
-import { join } from "path";
 import { randomUUID } from "crypto";
 import { analyzeDocument, generateSearchAnswer, geminiVisionChat } from "../lib/ai.js";
 import { extractFileText } from "../lib/fileExtractor.js";
 import { assertPermission, getRole, hasPermission } from "../lib/permissions.js";
+import { uploadToR2, downloadFromR2, deleteFromR2 } from "../lib/r2.js";
 
 const data = new Hono();
 
 data.use("*", authMiddleware);
-
-const UPLOAD_DIR = join(process.cwd(), "uploads");
-
-function isValidFilePath(filePath: string, orgId: string): boolean {
-  if (!filePath || filePath.includes("..") || filePath.includes("\\")) return false;
-  return filePath.startsWith(orgId + "/");
-}
 
 
 
@@ -41,6 +33,15 @@ data.post("/upload", async (c) => {
   // Org quota checks — storage and document count before mkdir
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) return c.json({ error: "Organization not found" }, 404);
+
+  // Trial expiration check — block uploads if trial expired and no active subscription
+  if (org.subscriptionState === "trialing" && org.trialEndsAt && new Date() > org.trialEndsAt) {
+    return c.json({ error: "Trial expired. Please subscribe to continue uploading.", trialExpired: true }, 403);
+  }
+  if (org.subscriptionState !== "active" && org.subscriptionState !== "trialing") {
+    return c.json({ error: "No active subscription. Please subscribe to upload.", subscriptionRequired: true }, 403);
+  }
+
   const agg = await prisma.document.aggregate({
     where: { organizationId: orgId, deletedAt: null },
     _sum: { fileSize: true },
@@ -70,11 +71,9 @@ data.post("/upload", async (c) => {
     return c.json({ error: "A file with the same name and size already exists.", duplicateId: dup.id }, 409);
   }
 
-  await mkdir(join(UPLOAD_DIR, orgId), { recursive: true });
-  const filePath = join(UPLOAD_DIR, orgId, filename);
-
+  const r2Key = `${orgId}/${filename}`;
   const arrayBuffer = await file.arrayBuffer();
-  await writeFile(filePath, Buffer.from(arrayBuffer));
+  await uploadToR2(r2Key, Buffer.from(arrayBuffer), file.type || "application/octet-stream");
 
   return c.json({
     id: fileId,
@@ -97,15 +96,13 @@ data.get("/download/:docId", async (c) => {
     where: { id: docId, organizationId: orgId, deletedAt: null },
   });
 
-  if (!doc || !doc.filePath || !isValidFilePath(doc.filePath, orgId)) {
+  if (!doc || !doc.filePath) {
     return c.json({ error: "File not found" }, 404);
   }
 
-  const { readFile } = await import("fs/promises");
-  const fullPath = join(UPLOAD_DIR, doc.filePath);
-
+  const r2Key = doc.filePath;
   try {
-    const data = await readFile(fullPath);
+    const data = await downloadFromR2(r2Key);
     const ext = doc.fileType || "bin";
     const mimeTypes: Record<string, string> = {
       pdf: "application/pdf",
@@ -128,7 +125,7 @@ data.get("/download/:docId", async (c) => {
       },
     });
   } catch {
-    return c.json({ error: "File not found on disk" }, 404);
+    return c.json({ error: "File not found in storage" }, 404);
   }
 });
 
@@ -146,7 +143,7 @@ data.get("/preview/:docId", async (c) => {
   if (!doc) return c.json({ error: "File not found" }, 404);
 
   // Docs without a stored file (e.g. seeded demo docs): synthesize a viewable text preview from DB
-  if (!doc.filePath || !isValidFilePath(doc.filePath, orgId)) {
+  if (!doc.filePath) {
     const lines = [
       doc.title,
       "=".repeat(doc.title.length),
@@ -171,9 +168,8 @@ data.get("/preview/:docId", async (c) => {
     });
   }
 
-  const fullPath = join(UPLOAD_DIR, doc.filePath);
   try {
-    const data = await readFile(fullPath);
+    const data = await downloadFromR2(doc.filePath);
     const ext = doc.fileType || "bin";
     const mimeTypes: Record<string, string> = {
       pdf: "application/pdf",
@@ -197,8 +193,33 @@ data.get("/preview/:docId", async (c) => {
       },
     });
   } catch {
-    return c.json({ error: "File not found on disk" }, 404);
+    return c.json({ error: "File not found in storage" }, 404);
   }
+});
+
+// --- Trial Status ---
+data.get("/trial-status", async (c) => {
+  const orgId = c.get("orgId");
+  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  if (!org) return c.json({ error: "Organization not found" }, 404);
+
+  const isTrialing = org.subscriptionState === "trialing";
+  const trialExpired = isTrialing && org.trialEndsAt && new Date() > org.trialEndsAt;
+  const daysLeft = isTrialing && org.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(org.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  return c.json({
+    subscriptionState: org.subscriptionState,
+    planTier: org.planTier,
+    isTrialing,
+    trialExpired: !!trialExpired,
+    trialEndsAt: org.trialEndsAt?.toISOString() || null,
+    daysLeft,
+    maxStorageBytes: Number(org.maxStorageBytes),
+    maxDocuments: org.maxDocuments,
+    maxUsers: org.maxUsers,
+  });
 });
 
 // --- Documents (aliased from /documents route but kept for compatibility) ---
@@ -450,6 +471,11 @@ data.delete("/documents/:id", async (c) => {
   }
 
   await prisma.document.update({ where: { id }, data: { deletedAt: new Date() } });
+
+  if (existing.filePath) {
+    try { await deleteFromR2(existing.filePath); } catch {}
+  }
+
   return c.json({ ok: true });
 });
 

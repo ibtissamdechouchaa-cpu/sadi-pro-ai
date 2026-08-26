@@ -14,7 +14,7 @@ SADI PRO is an AI-powered B2B Document Intelligence + Records Management + Smart
 | Auth | JWT (jsonwebtoken) |
 | AI | OpenAI GPT-4o-mini |
 | Search | PostgreSQL Full-Text Search (tsvector/tsquery) |
-| Storage | Local disk (uploads/) |
+| Storage | Cloudflare R2 (S3-compatible) |
 | State | React Context |
 | Routing | React Router 6 |
 | Icons | Lucide React |
@@ -86,7 +86,7 @@ Upload → Storage → Metadata Save → AI Analysis → Indexing → Ready
 ```
 
 1. Client uploads file via FormData to `/api/data/upload`
-2. Server saves file to disk, returns file path
+2. Server uploads file to Cloudflare R2, returns file path
 3. Document metadata saved to database
 4. AI analysis triggered via `/api/data/documents/:id/process`
 5. OpenAI generates summary, entities, risks, tags

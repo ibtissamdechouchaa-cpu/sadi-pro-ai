@@ -18,7 +18,7 @@ async function main() {
       industry: "Technology",
       country: "Morocco",
       maxUsers: 50,
-      maxStorageBytes: BigInt(107374182400),
+      maxStorageBytes: BigInt(10737418240),
       maxDocuments: 50000,
     },
   });

@@ -1,6 +1,6 @@
 # SADI PRO — Document Intelligence Platform
 
-> **AI-powered B2B Document Intelligence · Records Management · Smart Archive**
+> **AI-powered B2B Archive Document Intelligence · Records Management · Smart Archive**
 
 SADI PRO turns thousands of scattered files into governed, searchable organizational knowledge — upload, classify, retain, search with citations, and ask AI about any file (including scanned images via Gemini Vision).
 

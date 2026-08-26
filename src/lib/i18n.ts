@@ -99,6 +99,14 @@ type TranslationKeys = {
   language: string;
   currentPlan: string;
   upgrade: string;
+  monthly: string;
+  annual: string;
+  days: string;
+  trialDaysLeft: string;
+  trialExpired: string;
+  trialExpiredDesc: string;
+  trialDesc: string;
+  subscribe: string;
 
   // Messages
   noDocuments: string;
@@ -268,6 +276,14 @@ const translations: Record<Locale, TranslationKeys> = {
     language: 'Language',
     currentPlan: 'Current Plan',
     upgrade: 'Upgrade',
+    monthly: 'Monthly',
+    annual: 'Annual',
+    days: 'days',
+    trialDaysLeft: 'Free Trial',
+    trialExpired: 'Trial Expired',
+    trialExpiredDesc: 'Your free trial has ended. Subscribe to continue uploading documents.',
+    trialDesc: 'Starter plan features. Upgrade anytime for more storage and users.',
+    subscribe: 'Subscribe',
 
     noDocuments: 'No documents yet',
     noSearchResults: 'No search results found',
@@ -427,6 +443,14 @@ const translations: Record<Locale, TranslationKeys> = {
     language: 'اللغة',
     currentPlan: 'الخطة الحالية',
     upgrade: 'ترقية',
+    monthly: 'شهري',
+    annual: 'سنوي',
+    days: 'يوم',
+    trialDaysLeft: 'فترة تجريبية',
+    trialExpired: 'انتهت الفترة التجريبية',
+    trialExpiredDesc: 'انتهت فترة التجربة المجانية. اشترك لمتابعة رفع الوثائق.',
+    trialDesc: 'ميزات خطة Starter. قم بالترقية في أي وقت لمزيد من التخزين والمستخدمين.',
+    subscribe: 'اشترك',
 
     noDocuments: 'لا توجد وثائق بعد',
     noSearchResults: 'لم يتم العثور على نتائج',
@@ -586,6 +610,14 @@ const translations: Record<Locale, TranslationKeys> = {
     language: 'Langue',
     currentPlan: 'Plan actuel',
     upgrade: 'Mettre à niveau',
+    monthly: 'Mensuel',
+    annual: 'Annuel',
+    days: 'jours',
+    trialDaysLeft: 'Essai gratuit',
+    trialExpired: 'Essai expiré',
+    trialExpiredDesc: 'Votre essai gratuit est terminé. Abonnez-vous pour continuer à téléverser des documents.',
+    trialDesc: 'Fonctionnalités du plan Starter. Passez à niveau à tout moment pour plus de stockage et d\'utilisateurs.',
+    subscribe: 'S\'abonner',
 
     noDocuments: 'Aucun document pour le moment',
     noSearchResults: 'Aucun résultat trouvé',

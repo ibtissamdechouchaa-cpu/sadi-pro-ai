@@ -263,13 +263,13 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               onClick={() => setBilling('monthly')}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${billing === 'monthly' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}
             >
-              {t('previous')}
+              {t('monthly')}
             </button>
             <button
               onClick={() => setBilling('annual')}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${billing === 'annual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500'}`}
             >
-              {t('next')} <span className="text-success-600">{t('success')}</span>
+              {t('annual')} <span className="text-success-600">-17%</span>
             </button>
           </div>
         </div>

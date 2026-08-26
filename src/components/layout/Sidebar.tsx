@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/i18n';
+import { TrialBanner } from '@/components/TrialBanner';
 import {
   LayoutDashboard,
   FileText,
@@ -115,6 +116,7 @@ export function Sidebar({ current, onNavigate, collapsed, onHome }: SidebarProps
 
       {!collapsed && (
         <div className="border-t border-neutral-100 p-3">
+          <TrialBanner />
           <div className="rounded-xl bg-gradient-to-br from-primary-50 to-accent-50 p-3.5">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="h-4 w-4 text-primary-600" />

@@ -360,8 +360,8 @@ export function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle>{t('currentPlan')}</CardTitle>
                     <div className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 p-0.5">
-                      <button onClick={() => setBillingCycle('monthly')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'monthly' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>{t('previous')}</button>
-                      <button onClick={() => setBillingCycle('annual')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'annual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>{t('next')}</button>
+                      <button onClick={() => setBillingCycle('monthly')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'monthly' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>{t('monthly')}</button>
+                      <button onClick={() => setBillingCycle('annual')} className={cn('rounded-full px-3 py-1 text-xs font-medium transition-colors', billingCycle === 'annual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500')}>{t('annual')}</button>
                     </div>
                   </div>
                 </CardHeader>
@@ -482,7 +482,7 @@ export function SettingsPage() {
                       <p className="text-sm font-medium text-neutral-900">{t('security')}</p>
                       <p className="text-xs text-neutral-500">{t('security')}</p>
                     </div>
-                    <span className="text-sm text-neutral-600">30 {t('previous')}</span>
+                    <span className="text-sm text-neutral-600">30 {t('days')}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div>

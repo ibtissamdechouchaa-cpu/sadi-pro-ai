@@ -57,7 +57,21 @@ auth.post("/signup", async (c) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    const org = await tx.organization.create({ data: { name: orgName.trim(), slug: finalSlug } });
+    const trialEnds = new Date();
+    trialEnds.setDate(trialEnds.getDate() + 14);
+
+    const org = await tx.organization.create({
+      data: {
+        name: orgName.trim(),
+        slug: finalSlug,
+        planTier: "starter",
+        subscriptionState: "trialing",
+        trialEndsAt: trialEnds,
+        maxStorageBytes: BigInt(209715200),
+        maxDocuments: 500,
+        maxUsers: 5,
+      },
+    });
     const profile = await tx.profile.create({
       data: {
         id: crypto.randomUUID(),

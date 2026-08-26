@@ -22,10 +22,13 @@ services:
       PORT: "3001"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
     depends_on:
       - db
-    volumes:
-      - uploads:/app/uploads
 
   client:
     image: node:18-alpine
@@ -42,4 +45,3 @@ services:
 
 volumes:
   pgdata:
-  uploads:
