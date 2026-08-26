@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 import {
   LayoutDashboard,
   FileText,
@@ -9,7 +10,6 @@ import {
   Users,
   Settings,
   BarChart3,
-  FileStack,
   Sparkles,
   Bell,
   Trash2,
@@ -42,24 +42,24 @@ interface SidebarProps {
   onHome?: () => void;
 }
 
-const navItems: { key: PageKey; label: string; icon: typeof LayoutDashboard }[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'documents', label: 'Documents', icon: FileText },
-  { key: 'collections', label: 'Collections', icon: FolderOpen },
-  { key: 'search', label: 'Smart Search', icon: Search },
-  { key: 'processing', label: 'Processing', icon: Cpu },
-  { key: 'workflows', label: 'Workflows', icon: Workflow },
-  { key: 'compliance', label: 'Compliance', icon: Shield },
-  { key: 'team', label: 'Team & Roles', icon: Users },
-  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { key: 'notifications', label: 'Notifications', icon: Bell },
-  { key: 'activity', label: 'Activity Log', icon: Activity },
-  { key: 'trash', label: 'Trash', icon: Trash2 },
-  { key: 'documentation', label: 'Documentation', icon: BookOpen },
-  { key: 'settings', label: 'Settings', icon: Settings },
+const navItemsConfig: { key: PageKey; labelKey: string; fallback: string; icon: typeof LayoutDashboard }[] = [
+  { key: 'dashboard', labelKey: 'dashboard', fallback: 'Dashboard', icon: LayoutDashboard },
+  { key: 'documents', labelKey: 'documents', fallback: 'Documents', icon: FileText },
+  { key: 'collections', labelKey: 'collections', fallback: 'Collections', icon: FolderOpen },
+  { key: 'search', labelKey: 'searchPage', fallback: 'Smart Search', icon: Search },
+  { key: 'processing', labelKey: 'processing', fallback: 'Processing', icon: Cpu },
+  { key: 'workflows', labelKey: 'workflows', fallback: 'Workflows', icon: Workflow },
+  { key: 'compliance', labelKey: 'compliance', fallback: 'Compliance', icon: Shield },
+  { key: 'team', labelKey: 'team', fallback: 'Team & Roles', icon: Users },
+  { key: 'analytics', labelKey: 'analytics', fallback: 'Analytics', icon: BarChart3 },
+  { key: 'notifications', labelKey: 'notifications', fallback: 'Notifications', icon: Bell },
+  { key: 'activity', labelKey: 'activity', fallback: 'Activity Log', icon: Activity },
+  { key: 'trash', labelKey: 'trash', fallback: 'Trash', icon: Trash2 },
+  { key: 'settings', labelKey: 'settings', fallback: 'Settings', icon: Settings },
 ];
 
 export function Sidebar({ current, onNavigate, collapsed, onHome }: SidebarProps) {
+  const { t } = useTranslation();
   return (
     <aside
       className={cn(
@@ -86,9 +86,10 @@ export function Sidebar({ current, onNavigate, collapsed, onHome }: SidebarProps
           </p>
         )}
         <ul className="space-y-0.5">
-          {navItems.map((item) => {
+          {navItemsConfig.map((item) => {
             const Icon = item.icon;
             const active = current === item.key;
+            const label = (t(item.labelKey as never) as string) || item.fallback;
             return (
               <li key={item.key}>
                 <button
@@ -100,10 +101,10 @@ export function Sidebar({ current, onNavigate, collapsed, onHome }: SidebarProps
                       : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900',
                     collapsed && 'justify-center'
                   )}
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed ? label : undefined}
                 >
                   <Icon className={cn('h-4.5 w-4.5 shrink-0', active && 'text-primary-600')} />
-                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && <span>{label}</span>}
                   {active && !collapsed && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-500" />}
                 </button>
               </li>

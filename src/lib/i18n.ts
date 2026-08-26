@@ -32,9 +32,14 @@ type TranslationKeys = {
   collections: string;
   searchPage: string;
   processing: string;
+  workflows: string;
   compliance: string;
   team: string;
   analytics: string;
+  notifications: string;
+  activity: string;
+  trash: string;
+  documentation: string;
   settings: string;
 
   // Auth
@@ -135,9 +140,14 @@ const translations: Record<Locale, TranslationKeys> = {
     collections: 'Collections',
     searchPage: 'Search',
     processing: 'Processing',
+    workflows: 'Workflows',
     compliance: 'Compliance',
     team: 'Team',
     analytics: 'Analytics',
+    notifications: 'Notifications',
+    activity: 'Activity Log',
+    trash: 'Trash',
+    documentation: 'Documentation',
     settings: 'Settings',
 
     signIn: 'Sign In',
@@ -231,9 +241,14 @@ const translations: Record<Locale, TranslationKeys> = {
     collections: 'المجموعات',
     searchPage: 'بحث',
     processing: 'المعالجة',
+    workflows: 'سير العمل',
     compliance: 'الامتثال',
     team: 'الفريق',
     analytics: 'التحليلات',
+    notifications: 'الإشعارات',
+    activity: 'سجل النشاط',
+    trash: 'سلة المهملات',
+    documentation: 'التوثيق',
     settings: 'الإعدادات',
 
     signIn: 'تسجيل الدخول',
@@ -327,9 +342,14 @@ const translations: Record<Locale, TranslationKeys> = {
     collections: 'Collections',
     searchPage: 'Recherche',
     processing: 'Traitement',
+    workflows: 'Flux de travail',
     compliance: 'Conformité',
     team: 'Équipe',
     analytics: 'Analyses',
+    notifications: 'Notifications',
+    activity: 'Journal',
+    trash: 'Corbeille',
+    documentation: 'Documentation',
     settings: 'Paramètres',
 
     signIn: 'Se connecter',
@@ -394,12 +414,17 @@ const translations: Record<Locale, TranslationKeys> = {
   },
 };
 
-let currentLocale: Locale = 'en';
+let currentLocale: Locale = (localStorage.getItem('sadi_locale') as Locale) || 'en';
+
+const listeners = new Set<() => void>();
+function notify() { listeners.forEach((fn) => fn()); }
 
 export function setLocale(locale: Locale): void {
   currentLocale = locale;
+  try { localStorage.setItem('sadi_locale', locale); } catch {}
   document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
   document.documentElement.lang = locale;
+  notify();
 }
 
 export function getLocale(): Locale {
@@ -410,8 +435,33 @@ export function t(key: keyof TranslationKeys): string {
   return translations[currentLocale][key] || translations.en[key] || key;
 }
 
+export function subscribeLocale(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+// React hook — re-renders when locale changes
+import { useSyncExternalStore } from 'react';
+export function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, getLocale, getLocale);
+}
+export function useTranslation(): { t: typeof t; locale: Locale; setLocale: typeof setLocale } {
+  const locale = useLocale();
+  return { t: (k: keyof TranslationKeys) => translations[locale][k] || translations.en[k] || k, locale, setLocale };
+}
+
 export function isRTL(): boolean {
   return currentLocale === 'ar';
+}
+
+// Init dir/lang on load (no notify — avoids double render)
+try {
+  const saved = localStorage.getItem('sadi_locale') as Locale | null;
+  if (saved && ['en', 'fr', 'ar'].includes(saved)) currentLocale = saved;
+} catch {}
+if (typeof document !== 'undefined') {
+  document.documentElement.dir = currentLocale === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = currentLocale;
 }
 
 export function formatNumber(num: number): string {
