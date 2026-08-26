@@ -15,6 +15,7 @@ import {
   Trash2,
   Activity,
   Workflow,
+  BookOpen,
 } from 'lucide-react';
 
 export type PageKey =
@@ -30,6 +31,7 @@ export type PageKey =
   | 'notifications'
   | 'activity'
   | 'trash'
+  | 'documentation'
   | 'settings';
 
 interface SidebarProps {
@@ -53,6 +55,7 @@ const navItems: { key: PageKey; label: string; icon: typeof LayoutDashboard }[] 
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'activity', label: 'Activity Log', icon: Activity },
   { key: 'trash', label: 'Trash', icon: Trash2 },
+  { key: 'documentation', label: 'Documentation', icon: BookOpen },
   { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -64,17 +67,14 @@ export function Sidebar({ current, onNavigate, collapsed, onHome }: SidebarProps
         collapsed ? 'w-16' : 'w-60'
       )}
     >
-      <div className="flex h-16 items-center gap-2.5 border-b border-neutral-100 px-4">
-        <button
-          onClick={onHome}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm hover:bg-primary-700 transition-colors"
-        >
-          <FileStack className="h-5 w-5" />
+      <div className="flex h-16 items-center gap-2.5 border-b border-neutral-100 px-3">
+        <button onClick={onHome} className="shrink-0 rounded-xl overflow-hidden hover:opacity-90 transition-opacity" title="SADI PRO — Home">
+          <img src="/sadi-logo.png" alt="SADI PRO" className={collapsed ? 'h-9 w-9 object-contain' : 'h-10 w-auto max-w-[150px] object-contain'} />
         </button>
         {!collapsed && (
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <span className="text-sm font-bold text-neutral-900 leading-none">SADI PRO</span>
-            <span className="text-[10px] text-neutral-400 mt-1">Document Intelligence</span>
+            <span className="text-[10px] text-neutral-400 mt-0.5 leading-none">Smart Archive</span>
           </div>
         )}
       </div>

@@ -25,6 +25,7 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then(m 
 const TrashPage = lazy(() => import('@/pages/TrashPage').then(m => ({ default: m.TrashPage })));
 const ActivityPage = lazy(() => import('@/pages/ActivityPage').then(m => ({ default: m.ActivityPage })));
 const WorkflowsPage = lazy(() => import('@/pages/WorkflowsPage').then(m => ({ default: m.WorkflowsPage })));
+const DocumentationPage = lazy(() => import('@/pages/DocumentationPage').then(m => ({ default: m.DocumentationPage })));
 
 function PageLoader() {
   return (
@@ -110,6 +111,8 @@ function AppRoutes() {
         return <TrashPage />;
       case 'workflows':
         return <WorkflowsPage />;
+      case 'documentation':
+        return <DocumentationPage />;
       case 'settings':
         return <SettingsPage />;
       default:

@@ -189,6 +189,7 @@ export interface PlanConfig {
   name: string;
   monthlyPrice: number;
   annualPrice: number;
+  currency?: string;
   maxUsers: number | null;
   maxStorageGB: number;
   maxDocuments: number;

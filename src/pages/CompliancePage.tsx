@@ -12,6 +12,7 @@ import {
   X,
   Lock,
 } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -209,7 +210,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
       {tab === 'retention' && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Retention Policies</CardTitle>
+            <CardTitle>Retention Policies</CardTitle><InfoTooltip text="How long each document type is kept. Auto-apply sets expiresAt; legal hold blocks disposal." />
             <div className="flex gap-2">
               {retentionPolicies.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={autoApply}>Auto-apply to records</Button>

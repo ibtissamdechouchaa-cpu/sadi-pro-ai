@@ -29,14 +29,9 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
-      <nav className="sticky top-0 z-40 border-b border-neutral-100 bg-white/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-40 border-b border-neutral-100 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-white shadow-sm">
-              <FileStack className="h-5 w-5" />
-            </div>
-            <span className="text-lg font-bold text-neutral-900">SADI PRO</span>
-          </div>
+          <img src="/sadi-logo.png" alt="SADI PRO" className="h-9 w-auto object-contain" />
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">Features</a>
             <a href="#pricing" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">Pricing</a>
@@ -290,14 +285,18 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
               <h3 className="text-lg font-bold text-neutral-900">{plan.name}</h3>
               <div className="mt-4">
                 {plan.tier === 'enterprise' ? (
-                  <p className="text-3xl font-bold text-neutral-900">Custom</p>
+                  <p className="text-3xl font-bold text-neutral-900">Sur devis</p>
                 ) : (
                   <>
-                    <span className="text-3xl font-bold text-neutral-900">
-                      ${billing === 'annual' ? plan.annualPrice : plan.monthlyPrice}
+                    <span className="text-2xl font-bold text-neutral-900">
+                      {new Intl.NumberFormat('fr-DZ').format(billing === 'annual' ? plan.annualPrice : plan.monthlyPrice)} DZD
                     </span>
-                    <span className="text-sm text-neutral-500">/mo</span>
+                    <span className="text-sm text-neutral-500">/mois HT</span>
+                    <span className="ml-1 inline-flex rounded-full border border-primary-100 bg-primary-50 px-1.5 py-0.5 text-[10px] font-semibold text-primary-700">DZD</span>
                   </>
+                )}
+                {plan.tier !== 'enterprise' && (
+                  <p className="mt-1 text-[11px] text-neutral-400">TVA 19% incluse · Paiement CIB/Edahabia via SATIM</p>
                 )}
               </div>
               <ul className="mt-6 space-y-3">
@@ -340,12 +339,7 @@ export function LandingPage({ onSignIn, onSignUp }: LandingPageProps) {
       <footer className="border-t border-neutral-100 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white">
-                <FileStack className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-neutral-900">SADI PRO</span>
-            </div>
+            <img src="/sadi-logo.png" alt="SADI PRO" className="h-8 w-auto object-contain opacity-90" />
             <nav className="flex items-center gap-6 text-xs text-neutral-500">
               <a href="#" className="hover:text-neutral-900 transition-colors">Privacy</a>
               <a href="#" className="hover:text-neutral-900 transition-colors">Terms</a>

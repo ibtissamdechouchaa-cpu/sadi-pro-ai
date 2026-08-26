@@ -95,12 +95,7 @@ export function AuthPage({ mode, onToggleMode, onSuccess, onBack }: AuthPageProp
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-neutral-900 p-12 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-primary-900/30" />
         <div className="relative">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg">
-              <FileStack className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold">SADI PRO</span>
-          </div>
+          <img src="/sadi-logo.png" alt="SADI PRO — Smart Archive Document Intelligent" className="h-16 w-auto object-contain drop-shadow-lg" />
         </div>
         <div className="relative">
           <h2 className="text-3xl font-bold leading-tight">

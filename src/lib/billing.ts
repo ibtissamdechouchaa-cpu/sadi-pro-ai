@@ -1,11 +1,14 @@
 import type { PlanConfig, PlanTier } from '@/types';
 
+// Prices in DZD — base 135 DZD/USD (Banque d'Algérie, Aug 2026), HT;
+// retail absorbs 19% TVA + ~5% SATIM + .90 psychological pricing.
 export const plans: PlanConfig[] = [
   {
     tier: 'starter',
     name: 'Starter',
-    monthlyPrice: 29,
-    annualPrice: 24,
+    monthlyPrice: 4990,
+    annualPrice: 3990,
+    currency: 'DZD',
     maxUsers: 5,
     maxStorageGB: 25,
     maxDocuments: 5000,
@@ -21,8 +24,9 @@ export const plans: PlanConfig[] = [
   {
     tier: 'business',
     name: 'Business',
-    monthlyPrice: 79,
-    annualPrice: 67,
+    monthlyPrice: 11900,
+    annualPrice: 9900,
+    currency: 'DZD',
     maxUsers: 15,
     maxStorageGB: 100,
     maxDocuments: 25000,
@@ -40,8 +44,9 @@ export const plans: PlanConfig[] = [
   {
     tier: 'professional',
     name: 'Professional',
-    monthlyPrice: 199,
-    annualPrice: 169,
+    monthlyPrice: 24900,
+    annualPrice: 20900,
+    currency: 'DZD',
     maxUsers: 50,
     maxStorageGB: 500,
     maxDocuments: 100000,
@@ -60,6 +65,7 @@ export const plans: PlanConfig[] = [
     name: 'Enterprise',
     monthlyPrice: 0,
     annualPrice: 0,
+    currency: 'DZD',
     maxUsers: null,
     maxStorageGB: 0,
     maxDocuments: 0,

@@ -237,9 +237,9 @@ export function SettingsPage() {
   };
 
   const invoices = [
-    { id: 'INV-2026-08', date: 'Aug 1, 2026', amount: '$79.00', status: 'Paid' },
-    { id: 'INV-2026-07', date: 'Jul 1, 2026', amount: '$79.00', status: 'Paid' },
-    { id: 'INV-2026-06', date: 'Jun 1, 2026', amount: '$79.00', status: 'Paid' },
+    { id: 'DZ-INV-2026-08', date: '1 août 2026', amount: '11 900 DZD', status: 'Paid' },
+    { id: 'DZ-INV-2026-07', date: '1 juil. 2026', amount: '11 900 DZD', status: 'Paid' },
+    { id: 'DZ-INV-2026-06', date: '1 juin 2026', amount: '11 900 DZD', status: 'Paid' },
   ];
 
   return (
@@ -325,7 +325,7 @@ export function SettingsPage() {
                         <Badge variant="success" dot>Active</Badge>
                       </div>
                       <p className="text-sm text-neutral-500 mt-1">
-                        ${billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice}/mo - Renews on Jan 1, 2027
+                        {new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? currentPlan.annualPrice : currentPlan.monthlyPrice)} DZD/mois HT — Renouvellement 1 Jan 2027
                       </p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => setShowPlanModal(true)}>Change Plan</Button>
@@ -368,9 +368,10 @@ export function SettingsPage() {
                     >
                       <h4 className="text-sm font-bold text-neutral-900">{plan.name}</h4>
                       <p className="mt-2 text-2xl font-bold text-neutral-900">
-                        {plan.tier === 'enterprise' ? 'Custom' : `$${billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice}`}
-                        {plan.tier !== 'enterprise' && <span className="text-xs font-normal text-neutral-400">/mo</span>}
+                        {plan.tier === 'enterprise' ? 'Sur devis' : `${new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice)} DZD`}
+                        {plan.tier !== 'enterprise' && <span className="text-xs font-normal text-neutral-400">/mois HT</span>}
                       </p>
+                      {plan.tier !== 'enterprise' && <p className="text-[11px] text-neutral-400">DZD · TVA 19% incluse</p>}
                       <ul className="mt-3 space-y-1.5">
                         {plan.features.slice(0, 3).map((f) => (
                           <li key={f} className="flex items-start gap-1.5">
