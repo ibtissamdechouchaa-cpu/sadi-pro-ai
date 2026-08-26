@@ -63,14 +63,6 @@ data.post("/upload", async (c) => {
   const fileId = randomUUID();
   const filename = `${fileId}.${ext}`;
 
-  // dedup: reject if same name+size already exists for this org recently
-  const dup = await prisma.document.findFirst({
-    where: { organizationId: orgId, title: file.name.replace(/\.[^/.]+$/, ''), fileSize: BigInt(file.size), deletedAt: null },
-  });
-  if (dup) {
-    return c.json({ error: "A file with the same name and size already exists.", duplicateId: dup.id }, 409);
-  }
-
   const r2Key = `${orgId}/${filename}`;
   const arrayBuffer = await file.arrayBuffer();
   await uploadToR2(r2Key, Buffer.from(arrayBuffer), file.type || "application/octet-stream");
@@ -871,13 +863,24 @@ data.patch("/organization", async (c) => {
   }
   const orgId = c.get("orgId");
   const body = await c.req.json();
-  const allowedKeys = ['name','industry','country','timezone','defaultLanguage','logoUrl','settings'];
+  const allowedKeys = ['name','industry','country','timezone','defaultLanguage','logoUrl','settings','planTier'];
   const filtered: Record<string, unknown> = {};
   for (const key of allowedKeys) {
     if (key in body) filtered[key] = body[key];
   }
-  // Reject protected fields if present — explicitly ignore them
-  // planTier, maxUsers, maxStorageBytes, slug, subscriptionState are not allowed
+
+  // If planTier is being updated, also update limits
+  if (filtered.planTier) {
+    const { getPlanByTier } = await import("../../src/lib/billing.js");
+    const plan = getPlanByTier(filtered.planTier as string);
+    filtered.maxStorageBytes = BigInt(Math.round(plan.maxStorageGB * 1024 * 1024 * 1024));
+    filtered.maxDocuments = plan.maxDocuments;
+    filtered.maxUsers = plan.maxUsers || 5;
+    if (filtered.planTier !== 'trialing') {
+      filtered.subscriptionState = 'active';
+    }
+  }
+
   const organization = await prisma.organization.update({ where: { id: orgId }, data: filtered });
   return c.json({ organization });
 });

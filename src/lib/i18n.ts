@@ -181,6 +181,131 @@ type TranslationKeys = {
   roleReviewer: string;
   roleViewer: string;
   roleAuditor: string;
+
+  // Landing Page
+  solution: string;
+  features: string;
+  howItWorks: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroDesc: string;
+  startFree: string;
+  seeHowItWorks: string;
+  heroAiInsight: string;
+  archivedDocs: string;
+  autoClassify: string;
+  languages: string;
+  secureAccess: string;
+  problemTitle: string;
+  problemDesc: string;
+  problem1: string;
+  problem2: string;
+  problem3: string;
+  problem4: string;
+  problem5: string;
+  problem6: string;
+  problem7: string;
+  problemSolution: string;
+  howItWorksTitle: string;
+  howItWorksDesc: string;
+  step1Title: string;
+  step1Desc: string;
+  step2Title: string;
+  step2Desc: string;
+  step3Title: string;
+  step3Desc: string;
+  step4Title: string;
+  step4Desc: string;
+  step5Title: string;
+  step5Desc: string;
+  aiTitle: string;
+  aiDesc: string;
+  aiFeature1: string;
+  aiFeature1Desc: string;
+  aiFeature2: string;
+  aiFeature2Desc: string;
+  aiFeature3: string;
+  aiFeature3Desc: string;
+  aiFeature4: string;
+  aiFeature4Desc: string;
+  aiFeature5: string;
+  aiFeature5Desc: string;
+  aiFeature6: string;
+  aiFeature6Desc: string;
+  searchDemoTitle: string;
+  searchDemoDesc: string;
+  searchDemoQuery: string;
+  searchDemoResult: string;
+  expires: string;
+  viewResults: string;
+  archiveTitle: string;
+  archiveDesc: string;
+  versionControl: string;
+  metadata: string;
+  smartTags: string;
+  retention: string;
+  fullTextSearch: string;
+  legal: string;
+  finance: string;
+  hr: string;
+  contracts: string;
+  agreements: string;
+  legalDocs: string;
+  invoices: string;
+  reports: string;
+  payments: string;
+  employees: string;
+  empContracts: string;
+  certificates: string;
+  workflowTitle: string;
+  workflowDesc: string;
+  wfUpload: string;
+  wfClassify: string;
+  wfReview: string;
+  wfApproval: string;
+  wfArchive: string;
+  wfAlert: string;
+  wfRenewal: string;
+  workflowExample: string;
+  securityTitle: string;
+  securityDesc: string;
+  tls: string;
+  active: string;
+  monitoring: string;
+  useCasesTitle: string;
+  useCasesDesc: string;
+  useCase1: string;
+  useCase1Desc: string;
+  useCase2: string;
+  useCase2Desc: string;
+  useCase3: string;
+  useCase3Desc: string;
+  useCase4: string;
+  useCase4Desc: string;
+  useCase5: string;
+  useCase5Desc: string;
+  pricingDesc: string;
+  popular: string;
+  planStarterDesc: string;
+  planBusinessDesc: string;
+  planProDesc: string;
+  planEnterpriseDesc: string;
+  custom: string;
+  monthHT: string;
+  contactUs: string;
+  faqTitle: string;
+  faqArabic: string;
+  faqArabicAnswer: string;
+  faqFormats: string;
+  faqFormatsAnswer: string;
+  faqSearch: string;
+  faqSearchAnswer: string;
+  faqPermissions: string;
+  faqPermissionsAnswer: string;
+  faqSecurity: string;
+  faqSecurityAnswer: string;
+  ctaTitle: string;
+  ctaDesc: string;
 };
 
 const translations: Record<Locale, TranslationKeys> = {
@@ -349,6 +474,131 @@ const translations: Record<Locale, TranslationKeys> = {
     roleReviewer: 'Reviewer',
     roleViewer: 'Viewer',
     roleAuditor: 'Auditor',
+
+    // Landing Page
+    solution: 'Solution',
+    features: 'Features',
+    howItWorks: 'How It Works',
+    heroTitle: 'Transform your archive into an intelligent system.',
+    heroSubtitle: 'SADI PRO AI',
+    heroDesc: 'SADI PRO AI is an intelligent document archiving and management system that digitizes documents, automatically extracts information, searches thousands of files, and automates the document lifecycle.',
+    startFree: 'Start Free',
+    seeHowItWorks: 'See How It Works',
+    heroAiInsight: '47 contracts expiring within 30 days. AI detected 3 high-value documents requiring immediate review.',
+    archivedDocs: 'Documents archived',
+    autoClassify: 'AI auto-classification',
+    languages: '3 languages',
+    secureAccess: '24/7 secure access',
+    problemTitle: 'Is your organization still relying on traditional archiving?',
+    problemDesc: 'Scattered files, lost information, wasted time, and manual processes.',
+    problem1: '📁 Scattered files across departments',
+    problem2: '🔍 Difficulty finding information',
+    problem3: '⌛ Wasted time searching for documents',
+    problem4: '📝 Manual data entry',
+    problem5: '📄 Duplicate documents',
+    problem6: '⚠️ Forgotten contracts and deadlines',
+    problem7: '🔓 Difficulty controlling permissions',
+    problemSolution: 'SADI PRO AI transforms this process into an intelligent archive.',
+    howItWorksTitle: 'From document to knowledge in seconds',
+    howItWorksDesc: 'A simple 5-step process to digitize and intelligently manage your documents.',
+    step1Title: 'Upload',
+    step1Desc: 'Upload PDF, image, or Office document.',
+    step2Title: 'SADI Understands',
+    step2Desc: 'OCR + AI reads and classifies the document.',
+    step3Title: 'Extract',
+    step3Desc: 'Automatically extracts name, date, amount, parties, classification, and keywords.',
+    step4Title: 'Archive',
+    step4Desc: 'Places the document in the correct location with metadata and permissions.',
+    step5Title: 'Search & Ask',
+    step5Desc: 'Search in natural language or ask SADI AI directly.',
+    aiTitle: 'AI Document Intelligence',
+    aiDesc: 'Artificial intelligence that understands and processes your documents.',
+    aiFeature1: 'Smart Classification',
+    aiFeature1Desc: 'Automatically recognizes document type and classifies it.',
+    aiFeature2: 'OCR',
+    aiFeature2Desc: 'Converts scanned documents and images into searchable text.',
+    aiFeature3: 'Information Extraction',
+    aiFeature3Desc: 'Extracts important data without manual entry.',
+    aiFeature4: 'Semantic Search',
+    aiFeature4Desc: 'Search for information, not just file names.',
+    aiFeature5: 'AI Assistant',
+    aiFeature5Desc: 'Ask about your archive content and get document-based answers.',
+    aiFeature6: 'Smart Metadata',
+    aiFeature6Desc: 'Automatically creates metadata and tags.',
+    searchDemoTitle: 'Ask Your Archive',
+    searchDemoDesc: 'Ask questions in natural language and get instant answers from your documents.',
+    searchDemoQuery: 'What contracts expire within 30 days?',
+    searchDemoResult: 'Found 8 contracts matching your search criteria.',
+    expires: 'Expires',
+    viewResults: 'View Results',
+    archiveTitle: 'Organized, searchable, and intelligent archive',
+    archiveDesc: 'Structure your documents with folders, versions, metadata, tags, retention policies, and granular permissions.',
+    versionControl: 'Version Control',
+    metadata: 'Metadata',
+    smartTags: 'Smart Tags',
+    retention: 'Retention Policies',
+    fullTextSearch: 'Full-Text Search',
+    legal: 'Legal',
+    finance: 'Finance',
+    hr: 'Human Resources',
+    contracts: 'Contracts',
+    agreements: 'Agreements',
+    legalDocs: 'Legal Documents',
+    invoices: 'Invoices',
+    reports: 'Reports',
+    payments: 'Payments',
+    employees: 'Employees',
+    empContracts: 'Employment Contracts',
+    certificates: 'Certificates',
+    workflowTitle: 'Automate your document lifecycle',
+    workflowDesc: 'Not just archiving — complete workflow automation from upload to retention.',
+    wfUpload: 'Upload Document',
+    wfClassify: 'AI Classification',
+    wfReview: 'Review',
+    wfApproval: 'Approval',
+    wfArchive: 'Archive',
+    wfAlert: 'Expiration Alert',
+    wfRenewal: 'Retention / Renewal',
+    workflowExample: '⚠️ Contract expiring in 30 days — Send alert → Review → Approve → Renew',
+    securityTitle: 'Enterprise-grade security for your documents',
+    securityDesc: 'Your documents are protected with industry-standard security measures.',
+    tls: 'TLS',
+    active: 'Active',
+    monitoring: 'Monitoring',
+    useCasesTitle: 'Designed for every department',
+    useCasesDesc: 'SADI PRO AI serves legal, finance, HR, and operations teams.',
+    useCase1: 'Legal Department',
+    useCase1Desc: 'Contracts, agreements, and legal documents with version control and compliance.',
+    useCase2: 'Finance',
+    useCase2Desc: 'Invoices, financial reports, budgets, and payment documents.',
+    useCase3: 'Human Resources',
+    useCase3Desc: 'Employee files, contracts, certificates, and performance reviews.',
+    useCase4: 'Administration',
+    useCase4Desc: 'Centralized archive, reports, and organizational analytics.',
+    useCase5: 'Procurement',
+    useCase5Desc: 'Purchase orders, supplier contracts, and vendor management.',
+    pricingDesc: 'Start free with the Starter plan. Upgrade anytime.',
+    popular: 'Popular',
+    planStarterDesc: 'For individuals and small teams.',
+    planBusinessDesc: 'For small and medium businesses.',
+    planProDesc: 'For enterprises and large teams.',
+    planEnterpriseDesc: 'Custom infrastructure, permissions, and integrations.',
+    custom: 'Custom',
+    monthHT: 'month HT',
+    contactUs: 'Contact Us',
+    faqTitle: 'Frequently Asked Questions',
+    faqArabic: 'Does SADI PRO support Arabic?',
+    faqArabicAnswer: 'Yes, SADI PRO AI fully supports Arabic, French, and English with RTL layout and Arabic fonts.',
+    faqFormats: 'What document formats are supported?',
+    faqFormatsAnswer: 'PDF, Word, Excel, PowerPoint, images (PNG, JPG, TIFF), text files, CSV, JSON, XML, HTML, and ZIP archives.',
+    faqSearch: 'Can I search inside documents?',
+    faqSearchAnswer: 'Yes, SADI PRO uses PostgreSQL full-text search and AI-powered semantic search to find information inside your documents.',
+    faqPermissions: 'Can I control user permissions?',
+    faqPermissionsAnswer: 'Yes, SADI PRO has a complete RBAC system with 7 roles (Owner, Admin, Manager, Editor, Reviewer, Viewer, Auditor) and granular permissions.',
+    faqSecurity: 'Is my data secure?',
+    faqSecurityAnswer: 'Yes. Files are stored in Cloudflare R2 (encrypted at rest), all API calls use JWT authentication, passwords are bcrypt-hashed, and all endpoints have RBAC guards.',
+    ctaTitle: 'Transform your archive into an intelligent information source.',
+    ctaDesc: 'Start organizing your documents, extracting information, and accessing them faster.',
   },
 
   ar: {
@@ -516,6 +766,131 @@ const translations: Record<Locale, TranslationKeys> = {
     roleReviewer: 'مراجع',
     roleViewer: 'مشاهد',
     roleAuditor: 'مدقق',
+
+    // Landing Page
+    solution: 'الحل',
+    features: 'المميزات',
+    howItWorks: 'كيف يعمل',
+    heroTitle: 'حوّل أرشيف مؤسستك إلى نظام ذكي.',
+    heroSubtitle: 'SADI PRO AI',
+    heroDesc: 'SADI PRO AI هو نظام ذكي لأرشفة وإدارة وتحليل وثائق المؤسسات، يساعدك على رقمنة الوثائق، استخراج المعلومات تلقائيًا، البحث داخل آلاف الملفات، وأتمتة دورة حياة الوثيقة.',
+    startFree: 'ابدأ مجانًا',
+    seeHowItWorks: 'شاهد كيف يعمل',
+    heroAiInsight: '47 عقد تنتهي خلال 30 يومًا. كشف الذكاء الاصطناعي عن 3 وثائق عالية القيمة تتطلب مراجعة فورية.',
+    archivedDocs: 'وثيقة مؤرشفة',
+    autoClassify: 'تصنيف وتلقائي بالذكاء الاصطناعي',
+    languages: '3 لغات',
+    secureAccess: 'وصول آمن 24/7',
+    problemTitle: 'هل ما زالت مؤسستك تعتمد على الأرشيف التقليدي؟',
+    problemDesc: 'ملفات مبعثرة، معلومات ضائعة، وقت ضائع، وعمليات يدوية.',
+    problem1: '📁 ملفات مبعثرة عبر الأقسام',
+    problem2: '🔍 صعوبة العثور على المعلومات',
+    problem3: '⌛ وقت ضائع في البحث عن الوثائق',
+    problem4: '📝 إدخال بيانات يدوي',
+    problem5: '📄 وثائق مكررة',
+    problem6: '⚠️ عقود ومواعيد منسية',
+    problem7: '🔓 صعوبة التحكم في الصلاحيات',
+    problemSolution: 'SADI PRO AI يحول هذه العملية إلى أرشيف ذكي.',
+    howItWorksTitle: 'من الوثيقة إلى المعلومة في ثوانٍ',
+    howItWorksDesc: 'عملية بسيطة من 5 خطوات لرقمنة إدارة وثائقك بذكاء.',
+    step1Title: 'ارفع',
+    step1Desc: 'ارفع PDF أو صورة أو مستند Office.',
+    step2Title: 'SADI يفهم',
+    step2Desc: 'OCR + AI يقوم بقراءة وتصنيف الوثيقة.',
+    step3Title: 'استخرج',
+    step3Desc: 'يستخرج تلقائيًا الاسم والتاريخ والمبلغ والأطراف والتصنيف والكلمات المفتاحية.',
+    step4Title: 'أرشف',
+    step4Desc: 'يضع الوثيقة في المكان الصحيح مع Metadata وPermissions.',
+    step5Title: 'ابحث واسأل',
+    step5Desc: 'ابحث باللغة الطبيعية أو اسأل SADI AI مباشرة.',
+    aiTitle: 'الذكاء الاصطناعي يفهم وثائقك',
+    aiDesc: 'ذكاء اصطناعي يفهم ويrocess وثائقك.',
+    aiFeature1: 'التصنيف الذكي',
+    aiFeature1Desc: 'يتعرف تلقائيًا على نوع الوثيقة وتصنيفها.',
+    aiFeature2: 'OCR',
+    aiFeature2Desc: 'حوّل الوثائق والصور الممسوحة إلى نص قابل للبحث.',
+    aiFeature3: 'استخراج المعلومات',
+    aiFeature3Desc: 'يستخرج البيانات المهمة دون إدخال يدوي.',
+    aiFeature4: 'البحث الدلالي',
+    aiFeature4Desc: 'ابحث عن المعلومات وليس فقط أسماء الملفات.',
+    aiFeature5: 'مساعد الذكاء الاصطناعي',
+    aiFeature5Desc: 'اسأل عن محتوى أرشيفك واحصل على إجابات مبنية على وثائقك.',
+    aiFeature6: 'بيانات وصفية ذكية',
+    aiFeature6Desc: 'أنشئ Metadata وTags تلقائيًا.',
+    searchDemoTitle: 'اسأل أرشيفك',
+    searchDemoDesc: 'اسأل أسئلة باللغة الطبيعية واحصل على إجابات فورية من وثائقك.',
+    searchDemoQuery: 'ما هي العقود التي تنتهي خلال 30 يومًا؟',
+    searchDemoResult: 'وجدت 8 عقود تستوفي شروط البحث.',
+    expires: 'ينتهي',
+    viewResults: 'عرض النتائج',
+    archiveTitle: 'أرشيف منظم، قابل للبحث، وذكي',
+    archiveDesc: 'نظّم وثائقك بمجلدات وإصدارات وبيانات وصفية وعلامات وسياسات احتفاظ وصلاحيات دقيقة.',
+    versionControl: 'التحكم بالإصدارات',
+    metadata: 'البيانات الوصفية',
+    smartTags: 'العلامات الذكية',
+    retention: 'سياسات الاحتفاظ',
+    fullTextSearch: 'البحث النصي الكامل',
+    legal: 'القانوني',
+    finance: 'المالي',
+    hr: 'الموارد البشرية',
+    contracts: 'العقود',
+    agreements: 'الاتفاقيات',
+    legalDocs: 'الوثائق القانونية',
+    invoices: 'الفواتير',
+    reports: 'التقارير',
+    payments: 'المدفوعات',
+    employees: 'الموظفون',
+    empContracts: 'عقود العمل',
+    certificates: 'الشهادات',
+    workflowTitle: 'أتمتة دورة حياة الوثيقة',
+    workflowDesc: 'لا تكتفِ بالأرشفة — أتمتة كاملة من الرفع إلى الاحتفاظ.',
+    wfUpload: 'رفع الوثيقة',
+    wfClassify: 'التصنيف بالذكاء الاصطناعي',
+    wfReview: 'المراجعة',
+    wfApproval: 'الموافقة',
+    wfArchive: 'الأرشفة',
+    wfAlert: 'تنبيه الانتهاء',
+    wfRenewal: 'الاحتفاظ / التجديد',
+    workflowExample: '⚠️ عقد سينتهي بعد 30 يومًا — إرسال تنبيه → مراجعة → موافقة → تجديد',
+    securityTitle: 'أمان مؤسسي لوثائقك',
+    securityDesc: 'وثائقك محمية بمعايير أمان صناعية.',
+    tls: 'TLS',
+    active: 'نشط',
+    monitoring: 'مراقبة',
+    useCasesTitle: 'مصمم لكل قسم في مؤسستك',
+    useCasesDesc: 'SADI PRO AI يخدم الأقسام القانونية والمالية والموارد البشرية والإدارية.',
+    useCase1: 'القسم القانوني',
+    useCase1Desc: 'العقود والاتفاقيات والوثائق القانونية مع التحكم بالإصدارات والامتثال.',
+    useCase2: 'المالية',
+    useCase2Desc: 'الفواتير والتقارير المالية والميزانيات والمستندات المالية.',
+    useCase3: 'الموارد البشرية',
+    useCase3Desc: 'ملفات الموظفين والعقود والشهادات وتقييمات الأداء.',
+    useCase4: 'الإدارة',
+    useCase4Desc: 'أرشيف مركزي وتقارير وتحليلات تنظيمية.',
+    useCase5: 'المشتريات',
+    useCase5Desc: 'أوامر الشراء وعقود الموردين وإدارة الموردين.',
+    pricingDesc: 'ابدأ مجانًا مع خطة Starter. قم بالترقية في أي وقت.',
+    popular: 'الأكثر شعبية',
+    planStarterDesc: 'للأفراد والفرق الصغيرة.',
+    planBusinessDesc: 'للشركات الصغيرة والمتوسطة.',
+    planProDesc: 'للمؤسسات والفرق الكبيرة.',
+    planEnterpriseDesc: 'بنية تحتية وصلاحيات وتكتيكات مخصصة.',
+    custom: 'حسب الطلب',
+    monthHT: 'شهر HT',
+    contactUs: 'تواصل معنا',
+    faqTitle: 'الأسئلة الشائعة',
+    faqArabic: 'هل يدعم SADI PRO اللغة العربية؟',
+    faqArabicAnswer: 'نعم، SADI PRO AI يدعم العربية والفرنسية والإنجليزية بالكامل مع تخطيط RTL وخطوط عربية.',
+    faqFormats: 'ما أنواع الوثائق المدعومة؟',
+    faqFormatsAnswer: 'PDF وWord وExcel وPowerPoint والصور (PNG, JPG, TIFF) والملفات النصية وCSV وJSON وXML وHTML وأرشيفات ZIP.',
+    faqSearch: 'هل يمكن البحث داخل الوثائق؟',
+    faqSearchAnswer: 'نعم، SADI PRO يستخدم البحث النصي الكامل في PostgreSQL والبحث الدلالي بالذكاء الاصطناعي للعثور على المعلومات داخل وثائقك.',
+    faqPermissions: 'هل يمكن تحديد صلاحيات المستخدمين؟',
+    faqPermissionsAnswer: 'نعم، SADI PRO يمتلك نظام RBAC كامل بأدوار (المالك، المدير، المدير، المحرر، المراجع، المشاهد، المدقق) وصلاحيات دقيقة.',
+    faqSecurity: 'هل بياناتي آمنة؟',
+    faqSecurityAnswer: 'نعم. الملفات مخزنة في Cloudflare R2 (مشفرة)، جميع API تستخدم JWT، كلمات المرور مشفرة بـ bcrypt، جميع endpoints محمية بـ RBAC.',
+    ctaTitle: 'حوّل أرشيفك إلى مصدر ذكي للمعلومات.',
+    ctaDesc: 'ابدأ في تنظيم وثائقك، استخراج المعلومات منها، والوصول إليها بشكل أسرع.',
   },
 
   fr: {
@@ -683,6 +1058,131 @@ const translations: Record<Locale, TranslationKeys> = {
     roleReviewer: 'Réviseur',
     roleViewer: 'Lecteur',
     roleAuditor: 'Auditeur',
+
+    // Landing Page
+    solution: 'Solution',
+    features: 'Fonctionnalités',
+    howItWorks: 'Comment ça marche',
+    heroTitle: 'Transformez votre archive en système intelligent.',
+    heroSubtitle: 'SADI PRO AI',
+    heroDesc: 'SADI PRO AI est un système intelligent d\'archivage et de gestion de documents qui numérise les documents, extrait automatiquement les informations, recherche dans des milliers de fichiers et automatise le cycle de vie des documents.',
+    startFree: 'Commencer gratuitement',
+    seeHowItWorks: 'Voir comment ça marche',
+    heroAiInsight: '47 contrats expirant dans les 30 prochains jours. L\'IA a détecté 3 documents à haute valeur nécessitant une révision immédiate.',
+    archivedDocs: 'Documents archivés',
+    autoClassify: 'Classification automatique par IA',
+    languages: '3 langues',
+    secureAccess: 'Accès sécurisé 24/7',
+    problemTitle: 'Votre organisation utilise-t-elle encore un archivage traditionnel ?',
+    problemDesc: 'Fichiers dispersés, informations perdues, temps perdu et processus manuels.',
+    problem1: '📁 Fichiers dispersés entre les départements',
+    problem2: '🔍 Difficulté à trouver les informations',
+    problem3: '⌛ Temps perdu à chercher des documents',
+    problem4: '📝 Saisie manuelle de données',
+    problem5: '📄 Documents en double',
+    problem6: '⚠️ Contrats et échéances oubliés',
+    problem7: '🔓 Difficulté à contrôler les permissions',
+    problemSolution: 'SADI PRO AI transforme ce processus en archive intelligente.',
+    howItWorksTitle: 'Du document à la connaissance en quelques secondes',
+    howItWorksDesc: 'Un processus simple en 5 étapes pour numériser et gérer intelligemment vos documents.',
+    step1Title: 'Téléverser',
+    step1Desc: 'Téléversez PDF, image ou document Office.',
+    step2Title: 'SADI comprend',
+    step2Desc: 'OCR + IA lit et classe le document.',
+    step3Title: 'Extraire',
+    step3Desc: 'Extrait automatiquement le nom, la date, le montant, les parties, la classification et les mots-clés.',
+    step4Title: 'Archiver',
+    step4Desc: 'Place le document au bon endroit avec métadonnées et permissions.',
+    step5Title: 'Rechercher et demander',
+    step5Desc: 'Recherchez en langage naturel ou demandez directement à SADI AI.',
+    aiTitle: 'Intelligence documentaire par IA',
+    aiDesc: 'Intelligence artificielle qui comprend et traite vos documents.',
+    aiFeature1: 'Classification intelligente',
+    aiFeature1Desc: 'Reconnaît automatiquement le type de document et le classe.',
+    aiFeature2: 'OCR',
+    aiFeature2Desc: 'Convertit les documents numérisés et images en texte searchable.',
+    aiFeature3: 'Extraction d\'informations',
+    aiFeature3Desc: 'Extrait les données importantes sans saisie manuelle.',
+    aiFeature4: 'Recherche sémantique',
+    aiFeature4Desc: 'Recherchez des informations, pas seulement des noms de fichiers.',
+    aiFeature5: 'Assistant IA',
+    aiFeature5Desc: 'Posez des questions sur le contenu de votre archive et obtenez des réponses basées sur les documents.',
+    aiFeature6: 'Métadonnées intelligentes',
+    aiFeature6Desc: 'Crée automatiquement métadonnées et tags.',
+    searchDemoTitle: 'Interrogez votre archive',
+    searchDemoDesc: 'Posez des questions en langage naturel et obtenez des réponses instantanées de vos documents.',
+    searchDemoQuery: 'Quels contrats expirent dans les 30 prochains jours ?',
+    searchDemoResult: '8 contrats correspondant à vos critères de recherche trouvés.',
+    expires: 'Expire le',
+    viewResults: 'Voir les résultats',
+    archiveTitle: 'Archive organisée, searchable et intelligente',
+    archiveDesc: 'Structurez vos documents avec dossiers, versions, métadonnées, tags, politiques de rétention et permissions granulaires.',
+    versionControl: 'Contrôle de version',
+    metadata: 'Métadonnées',
+    smartTags: 'Tags intelligents',
+    retention: 'Politiques de rétention',
+    fullTextSearch: 'Recherche plein texte',
+    legal: 'Juridique',
+    finance: 'Finance',
+    hr: 'Ressources humaines',
+    contracts: 'Contrats',
+    agreements: 'Accords',
+    legalDocs: 'Documents juridiques',
+    invoices: 'Factures',
+    reports: 'Rapports',
+    payments: 'Paiements',
+    employees: 'Employés',
+    empContracts: 'Contrats de travail',
+    certificates: 'Certificats',
+    workflowTitle: 'Automatisez le cycle de vie de vos documents',
+    workflowDesc: 'Pas seulement de l\'archivage — automatisation complète du téléchargement à la rétention.',
+    wfUpload: 'Téléverser le document',
+    wfClassify: 'Classification IA',
+    wfReview: 'Révision',
+    wfApproval: 'Approbation',
+    wfArchive: 'Archiver',
+    wfAlert: 'Alerte d\'expiration',
+    wfRenewal: 'Rétention / Renouvellement',
+    workflowExample: '⚠️ Contrat expirant dans 30 jours — Alerte → Révision → Approbation → Renouvellement',
+    securityTitle: 'Sécurité de niveau entreprise pour vos documents',
+    securityDesc: 'Vos documents sont protégés par des mesures de sécurité standard de l\'industrie.',
+    tls: 'TLS',
+    active: 'Actif',
+    monitoring: 'Surveillance',
+    useCasesTitle: 'Conçu pour chaque département',
+    useCasesDesc: 'SADI PRO AI sert les équipes juridiques, financières, RH et opérationnelles.',
+    useCase1: 'Département juridique',
+    useCase1Desc: 'Contrats, accords et documents juridiques avec contrôle de version et conformité.',
+    useCase2: 'Finance',
+    useCase2Desc: 'Factures, rapports financiers, budgets et documents de paiement.',
+    useCase3: 'Ressources humaines',
+    useCase3Desc: 'Dossiers d\'employés, contrats, certificats et évaluations de performance.',
+    useCase4: 'Administration',
+    useCase4Desc: 'Archive centralisée, rapports et analyses organisationnelles.',
+    useCase5: 'Achats',
+    useCase5Desc: 'Bons de commande, contrats fournisseurs et gestion des vendors.',
+    pricingDesc: 'Commencez gratuitement avec le plan Starter. Passez à niveau à tout moment.',
+    popular: 'Populaire',
+    planStarterDesc: 'Pour les individus et petites équipes.',
+    planBusinessDesc: 'Pour les petites et moyennes entreprises.',
+    planProDesc: 'Pour les grandes entreprises et équipes.',
+    planEnterpriseDesc: 'Infrastructure, permissions et intégrations personnalisées.',
+    custom: 'Personnalisé',
+    monthHT: 'mois HT',
+    contactUs: 'Nous contacter',
+    faqTitle: 'Questions fréquentes',
+    faqArabic: 'SADI PRO supporte-t-il l\'arabe ?',
+    faqArabicAnswer: 'Oui, SADI PRO AI supporte entièrement l\'arabe, le français et l\'anglais avec disposition RTL et polices arabes.',
+    faqFormats: 'Quels formats de documents sont supportés ?',
+    faqFormatsAnswer: 'PDF, Word, Excel, PowerPoint, images (PNG, JPG, TIFF), fichiers texte, CSV, JSON, XML, HTML et archives ZIP.',
+    faqSearch: 'Puis-je rechercher dans les documents ?',
+    faqSearchAnswer: 'Oui, SADI PRO utilise la recherche plein texte PostgreSQL et la recherche sémantique par IA pour trouver des informations dans vos documents.',
+    faqPermissions: 'Puis-je contrôler les permissions utilisateurs ?',
+    faqPermissionsAnswer: 'Oui, SADI PRO possède un système RBAC complet avec 7 rôles (Propriétaire, Admin, Manager, Éditeur, Réviseur, Lecteur, Auditeur) et des permissions granulaires.',
+    faqSecurity: 'Mes données sont-elles sécurisées ?',
+    faqSecurityAnswer: 'Oui. Les fichiers sont stockés dans Cloudflare R2 (chiffrés), tous les appels API utilisent JWT, les mots de passe sont hashés en bcrypt, et tous les endpoints sont protégés par RBAC.',
+    ctaTitle: 'Transformez votre archive en source intelligente d\'informations.',
+    ctaDesc: 'Commencez à organiser vos documents, extraire les informations et y accéder plus rapidement.',
   },
 };
 

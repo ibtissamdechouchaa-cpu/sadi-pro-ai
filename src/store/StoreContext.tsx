@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Document, ProcessingJob, NotificationItem, ActivityEvent, User, Department, UsageStats } from '@/types';
 import { generateId, generateHash } from '@/lib/utils';
+import { getPlanByTier } from '@/lib/billing';
 
 interface StoreContextValue {
   documents: Document[];
@@ -92,16 +93,16 @@ const EMPTY_USER: User = {
 
 const EMPTY_USAGE: UsageStats = {
   storageUsedGB: 0,
-  storageLimitGB: 100,
+  storageLimitGB: 0.2,
   documentCount: 0,
-  documentLimit: 25000,
+  documentLimit: 500,
   userCount: 0,
-  userLimit: 15,
+  userLimit: 5,
   aiTokensUsed: 0,
-  aiTokensLimit: 1000000,
+  aiTokensLimit: 0,
   ocrPagesUsed: 0,
-  ocrPagesLimit: 50000,
-  planTier: 'business',
+  ocrPagesLimit: 0,
+  planTier: 'starter',
 };
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -136,7 +137,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       const orgId = auth.user.organizationId;
 
-      const [docsData, jobsData, activityData, notifData, deptData, usersData, orgData] = await Promise.all([
+      const [docsResult, jobsResult, activityResult, notifResult, deptResult, usersResult, orgResult] = await Promise.allSettled([
         api.get(`/api/data/documents?orgId=${orgId}`),
         api.get(`/api/data/jobs?orgId=${orgId}`),
         api.get(`/api/data/activity?orgId=${orgId}`),
@@ -145,6 +146,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         api.get(`/api/data/users?orgId=${orgId}`),
         api.get(`/api/data/organization?orgId=${orgId}`),
       ]);
+
+      const docsData = docsResult.status === 'fulfilled' ? docsResult.value : { documents: [] };
+      const jobsData = jobsResult.status === 'fulfilled' ? jobsResult.value : { jobs: [] };
+      const activityData = activityResult.status === 'fulfilled' ? activityResult.value : { activity: [] };
+      const notifData = notifResult.status === 'fulfilled' ? notifResult.value : { notifications: [] };
+      const deptData = deptResult.status === 'fulfilled' ? deptResult.value : { departments: [] };
+      const usersData = usersResult.status === 'fulfilled' ? usersResult.value : { users: [] };
+      const orgData = orgResult.status === 'fulfilled' ? orgResult.value : { organization: null };
 
       if (docsData.documents) setDocuments(docsData.documents.map(mapDbDocument));
       if (jobsData.jobs) {
@@ -200,20 +209,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const storageBytes = docsData.documents?.reduce((sum: number, d: Record<string, unknown>) => sum + ((d.fileSize as number) || 0), 0) || 0;
       const userCount = usersData.users?.length || 0;
       const org = orgData.organization;
+      const plan = getPlanByTier(org?.planTier || 'starter');
       const storageGB = storageBytes / (1024 * 1024 * 1024);
-      const maxStorageGB = (org?.maxStorageBytes || 107374182400) / (1024 * 1024 * 1024);
       setUsage({
         storageUsedGB: Math.round(storageGB * 100) / 100,
-        storageLimitGB: maxStorageGB,
+        storageLimitGB: plan.maxStorageGB,
         documentCount: docCount,
-        documentLimit: org?.maxDocuments || 25000,
+        documentLimit: plan.maxDocuments,
         userCount: userCount,
-        userLimit: org?.maxUsers || 15,
-        aiTokensUsed: docCount * 150,
-        aiTokensLimit: 1000000,
-        ocrPagesUsed: docCount * 3,
-        ocrPagesLimit: 50000,
-        planTier: org?.planTier || 'business',
+        userLimit: plan.maxUsers || 5,
+        aiTokensUsed: 0,
+        aiTokensLimit: 0,
+        ocrPagesUsed: 0,
+        ocrPagesLimit: 0,
+        planTier: org?.planTier || 'starter',
       });
     } catch (err) {
       console.error('Failed to refresh data:', err);

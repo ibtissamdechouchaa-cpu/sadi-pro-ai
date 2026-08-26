@@ -23,6 +23,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { useStore } from '@/store/StoreContext';
+import { getPlanByTier } from '@/lib/billing';
 import { useAuth } from '@/lib/auth';
 import { type PageKey } from '@/components/layout/Sidebar';
 import { useTranslation } from '@/lib/i18n';
@@ -273,7 +274,7 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
               <div className="mt-5 rounded-lg bg-neutral-50 p-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-neutral-500">{t('currentPlan')}</span>
-                  <Badge variant="default">{t('currentPlan')}</Badge>
+                  <Badge variant="default">{getPlanByTier(usage.planTier).name}</Badge>
                 </div>
                 <button
                   onClick={() => onNavigate('settings')}
