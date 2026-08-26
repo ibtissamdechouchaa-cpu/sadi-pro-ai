@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sadi
+      POSTGRES_PASSWORD: sadi_password
+      POSTGRES_DB: sadi_pro
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  server:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgres://sadi:sadi_password@db:5432/sadi_pro?sslmode=require
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PORT: "3001"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      - db
+    volumes:
+      - uploads:/app/uploads
+
+  client:
+    image: node:18-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: npx vite --host 0.0.0.0 --port 5173
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:3001
+
+volumes:
+  pgdata:
+  uploads:

@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                String    @id @default(uuid())
+  name              String
+  slug              String    @unique
+  industry          String?
+  country           String?
+  defaultLanguage   String    @default("en")
+  timezone          String    @default("UTC")
+  logoUrl           String?
+  planTier          String    @default("trialing")
+  subscriptionState String    @default("trialing")
+  trialEndsAt       DateTime?
+  maxUsers          Int       @default(5)
+  maxStorageBytes   BigInt    @default(26843545600)
+  maxDocuments      Int       @default(5000)
+  settings          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+}
+
+model Profile {
+  id              String    @id
+  organizationId  String?
+  email           String    @unique
+  fullName        String
+  avatarUrl       String?
+  avatarColor     String    @default("#2563eb")
+  role            String    @default("viewer")
+  departmentId    String?
+  isActive        Boolean   @default(true)
+  passwordHash    String
+  lastLoginAt     DateTime?
+  language        String    @default("en")
+  timezone        String    @default("UTC")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Department {
+  id              String    @id @default(uuid())
+  organizationId  String
+  name            String
+  color           String    @default("#2563eb")
+  parentId        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([deletedAt])
+}
+
+model Document {
+  id                String    @id @default(uuid())
+  organizationId    String
+  title             String
+  type              String    @default("other")
+  typeConfidence    Float     @default(0)
+  language          String    @default("unknown")
+  departmentId      String?
+  classification    String    @default("internal")
+  archiveState      String    @default("active")
+  approvalState     String    @default("draft")
+  status            String    @default("uploading")
+  fileSize          BigInt    @default(0)
+  fileType          String?
+  filePath          String?
+  storageBucket     String    @default("documents")
+  uploadedBy        String?
+  uploadedAt        DateTime  @default(now())
+  modifiedAt        DateTime  @default(now())
+  tags              String[]
+  version           Int       @default(1)
+  hash              String?
+  pageCount         Int       @default(0)
+  ocrCompleted      Boolean   @default(false)
+  embeddingCompleted Boolean  @default(false)
+  relatedDocIds     String[]
+  retentionYears    Int?
+  expiresAt         DateTime?
+  legalHold         Boolean   @default(false)
+  sharedWith        String[]
+  metadata          Json      @default("{}")
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([organizationId, deletedAt])
+  @@index([status])
+  @@index([departmentId])
+  @@index([uploadedAt])
+}
+
+model ProcessingJob {
+  id              String    @id @default(uuid())
+  organizationId  String
+  documentId      String?
+  documentName    String?
+  stage           String    @default("queued")
+  progress        Int       @default(0)
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  error           String?
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+  idempotencyKey  String?   @unique
+  createdAt       DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([documentId])
+  @@index([stage])
+}
+
+model AuditLog {
+  id              String    @id @default(uuid())
+  organizationId  String
+  userId          String?
+  action          String
+  resourceType    String?
+  resourceId      String?
+  resourceName    String?
+  metadata        Json      @default("{}")
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
+model ActivityEvent {
+  id              String    @id @default(uuid())
+  organizationId  String
+  userId          String?
+  userName        String?
+  action          String
+  resource        String?
+  icon            String?
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id              String    @id @default(uuid())
+  organizationId  String
+  userId          String
+  type            String    @default("info")
+  title           String
+  message         String?
+  read            Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  @@index([organizationId, userId])
+  @@index([read])
+}
+
+model RetentionPolicy {
+  id                String    @id @default(uuid())
+  organizationId    String
+  name              String
+  documentType      String?
+  departmentId      String?
+  jurisdiction      String?
+  sector            String?
+  retentionYears    Int
+  dispositionAction String    @default("delete")
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Collection {
+  id              String    @id @default(uuid())
+  organizationId  String
+  name            String
+  description     String?
+  isAiSuggested   Boolean   @default(false)
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Workflow {
+  id              String    @id @default(uuid())
+  organizationId  String
+  name            String
+  description     String?
+  triggerType     String
+  conditions      Json      @default("{}")
+  actions         Json      @default("[]")
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}

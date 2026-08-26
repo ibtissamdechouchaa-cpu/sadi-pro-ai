@@ -1,0 +1,426 @@
+export type Locale = 'ar' | 'fr' | 'en';
+
+type TranslationKeys = {
+  // Common
+  appName: string;
+  loading: string;
+  error: string;
+  success: string;
+  cancel: string;
+  save: string;
+  delete: string;
+  edit: string;
+  view: string;
+  search: string;
+  filter: string;
+  sort: string;
+  export: string;
+  import: string;
+  upload: string;
+  download: string;
+  close: string;
+  back: string;
+  next: string;
+  previous: string;
+  confirm: string;
+  yes: string;
+  no: string;
+
+  // Navigation
+  dashboard: string;
+  documents: string;
+  collections: string;
+  searchPage: string;
+  processing: string;
+  compliance: string;
+  team: string;
+  analytics: string;
+  settings: string;
+
+  // Auth
+  signIn: string;
+  signUp: string;
+  signOut: string;
+  email: string;
+  password: string;
+  fullName: string;
+  organizationName: string;
+  welcomeBack: string;
+  createAccount: string;
+  forgotPassword: string;
+  noAccount: string;
+  hasAccount: string;
+
+  // Dashboard
+  totalDocuments: string;
+  processingQueue: string;
+  needsReview: string;
+  expiringSoon: string;
+  storageUsed: string;
+  recentActivity: string;
+  aiInsights: string;
+
+  // Documents
+  allDocuments: string;
+  uploadDocuments: string;
+  dragDropFiles: string;
+  orClickToUpload: string;
+  supportedFormats: string;
+  documentType: string;
+  classification: string;
+  status: string;
+  department: string;
+  uploadedAt: string;
+  fileSize: string;
+  version: string;
+  tags: string;
+  metadata: string;
+  aiInsightsDoc: string;
+  versions: string;
+  activity: string;
+  permissions: string;
+
+  // Compliance
+  retentionPolicies: string;
+  legalHolds: string;
+  auditLogs: string;
+  recordsManagement: string;
+
+  // Settings
+  organization: string;
+  billing: string;
+  notifications: string;
+  security: string;
+  language: string;
+  currentPlan: string;
+  upgrade: string;
+
+  // Messages
+  noDocuments: string;
+  noSearchResults: string;
+  uploadSuccess: string;
+  processingStarted: string;
+  documentArchived: string;
+  documentDeleted: string;
+};
+
+const translations: Record<Locale, TranslationKeys> = {
+  en: {
+    appName: 'SADI PRO',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    cancel: 'Cancel',
+    save: 'Save',
+    delete: 'Delete',
+    edit: 'Edit',
+    view: 'View',
+    search: 'Search',
+    filter: 'Filter',
+    sort: 'Sort',
+    export: 'Export',
+    import: 'Import',
+    upload: 'Upload',
+    download: 'Download',
+    close: 'Close',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    confirm: 'Confirm',
+    yes: 'Yes',
+    no: 'No',
+
+    dashboard: 'Dashboard',
+    documents: 'Documents',
+    collections: 'Collections',
+    searchPage: 'Search',
+    processing: 'Processing',
+    compliance: 'Compliance',
+    team: 'Team',
+    analytics: 'Analytics',
+    settings: 'Settings',
+
+    signIn: 'Sign In',
+    signUp: 'Sign Up',
+    signOut: 'Sign Out',
+    email: 'Email',
+    password: 'Password',
+    fullName: 'Full Name',
+    organizationName: 'Organization Name',
+    welcomeBack: 'Welcome back',
+    createAccount: 'Create your account',
+    forgotPassword: 'Forgot password?',
+    noAccount: "Don't have an account?",
+    hasAccount: 'Already have an account?',
+
+    totalDocuments: 'Total Documents',
+    processingQueue: 'Processing Queue',
+    needsReview: 'Needs Review',
+    expiringSoon: 'Expiring Soon',
+    storageUsed: 'Storage Used',
+    recentActivity: 'Recent Activity',
+    aiInsights: 'AI Insights',
+
+    allDocuments: 'All Documents',
+    uploadDocuments: 'Upload Documents',
+    dragDropFiles: 'Drag & drop files here',
+    orClickToUpload: 'or click to upload',
+    supportedFormats: 'PDF, DOCX, XLSX, PPTX, TXT, CSV, Images, ZIP',
+    documentType: 'Document Type',
+    classification: 'Classification',
+    status: 'Status',
+    department: 'Department',
+    uploadedAt: 'Uploaded At',
+    fileSize: 'File Size',
+    version: 'Version',
+    tags: 'Tags',
+    metadata: 'Metadata',
+    aiInsightsDoc: 'AI Insights',
+    versions: 'Versions',
+    activity: 'Activity',
+    permissions: 'Permissions',
+
+    retentionPolicies: 'Retention Policies',
+    legalHolds: 'Legal Holds',
+    auditLogs: 'Audit Logs',
+    recordsManagement: 'Records Management',
+
+    organization: 'Organization',
+    billing: 'Billing',
+    notifications: 'Notifications',
+    security: 'Security',
+    language: 'Language',
+    currentPlan: 'Current Plan',
+    upgrade: 'Upgrade',
+
+    noDocuments: 'No documents yet',
+    noSearchResults: 'No search results found',
+    uploadSuccess: 'Documents uploaded successfully',
+    processingStarted: 'Processing started',
+    documentArchived: 'Document archived',
+    documentDeleted: 'Document moved to trash',
+  },
+
+  ar: {
+    appName: 'سادي برو',
+    loading: 'جاري التحميل...',
+    error: 'خطأ',
+    success: 'نجاح',
+    cancel: 'إلغاء',
+    save: 'حفظ',
+    delete: 'حذف',
+    edit: 'تعديل',
+    view: 'عرض',
+    search: 'بحث',
+    filter: 'تصفية',
+    sort: 'ترتيب',
+    export: 'تصدير',
+    import: 'استيراد',
+    upload: 'رفع',
+    download: 'تحميل',
+    close: 'إغلاق',
+    back: 'رجوع',
+    next: 'التالي',
+    previous: 'السابق',
+    confirm: 'تأكيد',
+    yes: 'نعم',
+    no: 'لا',
+
+    dashboard: 'لوحة التحكم',
+    documents: 'الوثائق',
+    collections: 'المجموعات',
+    searchPage: 'بحث',
+    processing: 'المعالجة',
+    compliance: 'الامتثال',
+    team: 'الفريق',
+    analytics: 'التحليلات',
+    settings: 'الإعدادات',
+
+    signIn: 'تسجيل الدخول',
+    signUp: 'إنشاء حساب',
+    signOut: 'تسجيل الخروج',
+    email: 'البريد الإلكتروني',
+    password: 'كلمة المرور',
+    fullName: 'الاسم الكامل',
+    organizationName: 'اسم المؤسسة',
+    welcomeBack: 'مرحباً بعودتك',
+    createAccount: 'إنشاء حسابك',
+    forgotPassword: 'نسيت كلمة المرور؟',
+    noAccount: 'ليس لديك حساب؟',
+    hasAccount: 'لديك حساب بالفعل؟',
+
+    totalDocuments: 'إجمالي الوثائق',
+    processingQueue: 'قائمة المعالجة',
+    needsReview: 'تحتاج مراجعة',
+    expiringSoon: 'تنتهي قريباً',
+    storageUsed: 'مساحة التخزين المستخدمة',
+    recentActivity: 'النشاط الأخير',
+    aiInsights: 'تحليلات الذكاء الاصطناعي',
+
+    allDocuments: 'جميع الوثائق',
+    uploadDocuments: 'رفع الوثائق',
+    dragDropFiles: 'اسحب وأفلت الملفات هنا',
+    orClickToUpload: 'أو انقر للرفع',
+    supportedFormats: 'PDF, DOCX, XLSX, PPTX, TXT, CSV, صور, ZIP',
+    documentType: 'نوع الوثيقة',
+    classification: 'التصنيف',
+    status: 'الحالة',
+    department: 'القسم',
+    uploadedAt: 'تاريخ الرفع',
+    fileSize: 'حجم الملف',
+    version: 'الإصدار',
+    tags: 'الوسوم',
+    metadata: 'البيانات الوصفية',
+    aiInsightsDoc: 'تحليلات الذكاء الاصطناعي',
+    versions: 'الإصدارات',
+    activity: 'النشاط',
+    permissions: 'الصلاحيات',
+
+    retentionPolicies: 'سياسات الاحتفاظ',
+    legalHolds: 'الاحتفاظ القانوني',
+    auditLogs: 'سجلات التدقيق',
+    recordsManagement: 'إدارة السجلات',
+
+    organization: 'المؤسسة',
+    billing: 'الفواتير',
+    notifications: 'الإشعارات',
+    security: 'الأمان',
+    language: 'اللغة',
+    currentPlan: 'الخطة الحالية',
+    upgrade: 'ترقية',
+
+    noDocuments: 'لا توجد وثائق بعد',
+    noSearchResults: 'لم يتم العثور على نتائج',
+    uploadSuccess: 'تم رفع الوثائق بنجاح',
+    processingStarted: 'بدأت المعالجة',
+    documentArchived: 'تم أرشفة الوثيقة',
+    documentDeleted: 'تم نقل الوثيقة إلى سلة المهملات',
+  },
+
+  fr: {
+    appName: 'SADI PRO',
+    loading: 'Chargement...',
+    error: 'Erreur',
+    success: 'Succès',
+    cancel: 'Annuler',
+    save: 'Enregistrer',
+    delete: 'Supprimer',
+    edit: 'Modifier',
+    view: 'Voir',
+    search: 'Rechercher',
+    filter: 'Filtrer',
+    sort: 'Trier',
+    export: 'Exporter',
+    import: 'Importer',
+    upload: 'Téléverser',
+    download: 'Télécharger',
+    close: 'Fermer',
+    back: 'Retour',
+    next: 'Suivant',
+    previous: 'Précédent',
+    confirm: 'Confirmer',
+    yes: 'Oui',
+    no: 'Non',
+
+    dashboard: 'Tableau de bord',
+    documents: 'Documents',
+    collections: 'Collections',
+    searchPage: 'Recherche',
+    processing: 'Traitement',
+    compliance: 'Conformité',
+    team: 'Équipe',
+    analytics: 'Analyses',
+    settings: 'Paramètres',
+
+    signIn: 'Se connecter',
+    signUp: "S'inscrire",
+    signOut: 'Se déconnecter',
+    email: 'E-mail',
+    password: 'Mot de passe',
+    fullName: 'Nom complet',
+    organizationName: "Nom de l'organisation",
+    welcomeBack: 'Bon retour',
+    createAccount: 'Créer votre compte',
+    forgotPassword: 'Mot de passe oublié?',
+    noAccount: "Vous n'avez pas de compte?",
+    hasAccount: 'Vous avez déjà un compte?',
+
+    totalDocuments: 'Total des documents',
+    processingQueue: 'File de traitement',
+    needsReview: 'À réviser',
+    expiringSoon: 'Expire bientôt',
+    storageUsed: 'Espace utilisé',
+    recentActivity: 'Activité récente',
+    aiInsights: 'Analyses IA',
+
+    allDocuments: 'Tous les documents',
+    uploadDocuments: 'Téléverser des documents',
+    dragDropFiles: 'Glissez-déposez vos fichiers ici',
+    orClickToUpload: 'ou cliquez pour téléverser',
+    supportedFormats: 'PDF, DOCX, XLSX, PPTX, TXT, CSV, Images, ZIP',
+    documentType: 'Type de document',
+    classification: 'Classification',
+    status: 'Statut',
+    department: 'Département',
+    uploadedAt: 'Téléversé le',
+    fileSize: 'Taille du fichier',
+    version: 'Version',
+    tags: 'Étiquettes',
+    metadata: 'Métadonnées',
+    aiInsightsDoc: 'Analyses IA',
+    versions: 'Versions',
+    activity: 'Activité',
+    permissions: 'Permissions',
+
+    retentionPolicies: 'Politiques de rétention',
+    legalHolds: 'Gels juridiques',
+    auditLogs: "Journaux d'audit",
+    recordsManagement: 'Gestion des documents',
+
+    organization: 'Organisation',
+    billing: 'Facturation',
+    notifications: 'Notifications',
+    security: 'Sécurité',
+    language: 'Langue',
+    currentPlan: 'Plan actuel',
+    upgrade: 'Mettre à niveau',
+
+    noDocuments: 'Aucun document pour le moment',
+    noSearchResults: 'Aucun résultat trouvé',
+    uploadSuccess: 'Documents téléversés avec succès',
+    processingStarted: 'Traitement démarré',
+    documentArchived: 'Document archivé',
+    documentDeleted: 'Document déplacé vers la corbeille',
+  },
+};
+
+let currentLocale: Locale = 'en';
+
+export function setLocale(locale: Locale): void {
+  currentLocale = locale;
+  document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = locale;
+}
+
+export function getLocale(): Locale {
+  return currentLocale;
+}
+
+export function t(key: keyof TranslationKeys): string {
+  return translations[currentLocale][key] || translations.en[key] || key;
+}
+
+export function isRTL(): boolean {
+  return currentLocale === 'ar';
+}
+
+export function formatNumber(num: number): string {
+  return new Intl.NumberFormat(currentLocale === 'ar' ? 'ar-DZ' : currentLocale === 'fr' ? 'fr-FR' : 'en-US').format(num);
+}
+
+export function formatCurrency(amount: number, currency = 'USD'): string {
+  return new Intl.NumberFormat(currentLocale === 'ar' ? 'ar-DZ' : currentLocale === 'fr' ? 'fr-FR' : 'en-US', {
+    style: 'currency',
+    currency,
+  }).format(amount);
+}
