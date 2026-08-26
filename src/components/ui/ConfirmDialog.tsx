@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 
 interface Props {
   open: boolean;
-  title: string;
+  title?: string;
   message: string;
   confirmLabel?: string;
   variant?: 'danger' | 'primary';
@@ -11,7 +11,7 @@ interface Props {
   onCancel: () => void;
 }
 
-export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', variant = 'danger', onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ open, title = 'Confirm', message, confirmLabel = 'Confirm', variant = 'danger', onConfirm, onCancel }: Props) {
   return (
     <Modal open={open} onClose={onCancel} title={title}>
       <p className="text-sm text-neutral-600">{message}</p>

@@ -26,10 +26,14 @@ import { useStore } from '@/store/StoreContext';
 import { useToast } from '@/lib/toast';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   statusConfig,
   typeConfig,
   classificationConfig,
+  getStatusLabel,
+  getTypeLabel,
+  getClassificationLabel,
   formatBytes,
   timeAgo,
   cn,
@@ -69,6 +73,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkShareRef = useRef<HTMLDivElement>(null);
   const rowDropdownRef = useRef<HTMLDivElement>(null);
+  const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
 
   const handleFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -107,16 +112,24 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
   const handleBulkShare = async () => {
     if (!bulkShareEmail.trim()) return;
     const email = bulkShareEmail.trim();
-    for (const docId of selected) {
-      try {
-        const doc = documents.find((d) => d.id === docId);
-        if (doc) {
-          const newShared = [...doc.sharedWith, email];
-          await api.patch(`/api/data/documents/${docId}`, { sharedWith: newShared });
-        }
-      } catch (err) {
-        console.error('Failed to share document:', docId, err);
-      }
+    const selectedIds = Array.from(selected);
+    const results = await Promise.allSettled(selectedIds.map(async (docId) => {
+      const doc = documents.find((d) => d.id === docId);
+      if (!doc) throw new Error(`Document ${docId} not found`);
+      const deduped = [...new Set([...doc.sharedWith, email])];
+      if (deduped.length === doc.sharedWith.length) return;
+      await api.patch(`/api/data/documents/${docId}`, { sharedWith: deduped });
+    }));
+    const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failures.length > 0) {
+      failures.forEach((f) => {
+        const msg = f.reason instanceof Error ? f.reason.message : String(f.reason);
+        toast('error', msg || t('error'));
+      });
+      if (failures.length < selectedIds.length) toast('success', `${selectedIds.length - failures.length} ${t('success')}`);
+    } else {
+      const skipped = results.filter((r) => r.status === 'fulfilled').length;
+      if (skipped > 0) toast('success', t('success'));
     }
     setBulkShareEmail('');
     setBulkShareOpen(false);
@@ -176,11 +189,18 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
     try {
       const doc = documents.find((d) => d.id === docId);
       if (doc) {
-        const newShared = [...doc.sharedWith, email];
-        await api.patch(`/api/data/documents/${docId}`, { sharedWith: newShared });
+        const deduped = [...new Set([...doc.sharedWith, email])];
+        if (deduped.length === doc.sharedWith.length) {
+          setRowShareEmail('');
+          setRowShareId(null);
+          return;
+        }
+        await api.patch(`/api/data/documents/${docId}`, { sharedWith: deduped });
+        toast('success', t('success'));
       }
     } catch (err) {
       console.error('Failed to share document:', docId, err);
+      toast('error', err instanceof Error ? err.message : t('error'));
     }
     setRowShareEmail('');
     setRowShareId(null);
@@ -198,6 +218,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -262,10 +283,10 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
       {showFilters && (
         <Card className="animate-slide-up">
           <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <FilterSelect label={t('documentType')} value={typeFilter} onChange={(v) => setTypeFilter(v as DocType | 'all')} options={[{ value: 'all', label: t('allDocuments') }, ...Object.entries(typeConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
-            <FilterSelect label={t('classification')} value={classFilter} onChange={(v) => setClassFilter(v as ClassificationLevel | 'all')} options={[{ value: 'all', label: t('classification') }, ...Object.entries(classificationConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
+            <FilterSelect label={t('documentType')} value={typeFilter} onChange={(v) => setTypeFilter(v as DocType | 'all')} options={[{ value: 'all', label: t('allDocuments') }, ...Object.entries(typeConfig).map(([k, v]) => ({ value: k, label: t(v.labelKey as never) }))]} />
+            <FilterSelect label={t('classification')} value={classFilter} onChange={(v) => setClassFilter(v as ClassificationLevel | 'all')} options={[{ value: 'all', label: t('classification') }, ...Object.entries(classificationConfig).map(([k, v]) => ({ value: k, label: t(v.labelKey as never) }))]} />
             <FilterSelect label={t('department')} value={deptFilter} onChange={(v) => setDeptFilter(v)} options={[{ value: 'all', label: t('department') }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
-            <FilterSelect label={t('status')} value={statusFilter} onChange={(v) => setStatusFilter(v)} options={[{ value: 'all', label: t('status') }, ...Object.entries(statusConfig).map(([k, v]) => ({ value: k, label: v.label }))]} />
+            <FilterSelect label={t('status')} value={statusFilter} onChange={(v) => setStatusFilter(v)} options={[{ value: 'all', label: t('status') }, ...Object.entries(statusConfig).map(([k, v]) => ({ value: k, label: t(v.labelKey as never) }))]} />
             {activeFilters > 0 && (
               <button
                 onClick={() => { setTypeFilter('all'); setClassFilter('all'); setDeptFilter('all'); setStatusFilter('all'); }}
@@ -308,7 +329,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
           <Button variant="ghost" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleBulkExport}>
             {t('export')}
           </Button>
-          <Button variant="ghost" size="sm" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => { if (!window.confirm(`${t('delete')} ${selected.size} ${t('documents')}?`)) return; const n = selected.size; selected.forEach((id) => deleteDocument(id)); setSelected(new Set()); toast('success', `${n} ${t('documentDeleted')}`); }}>
+          <Button variant="ghost" size="sm" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={() => setConfirm({open:true, message:`${t('delete')} ${selected.size} ${t('documents')}?`, onConfirm:()=>{ const n = selected.size; selected.forEach((id) => deleteDocument(id)); setSelected(new Set()); toast('success', `${n} ${t('documentDeleted')}`); }})}>
             {t('delete')}
           </Button>
           <button onClick={() => setSelected(new Set())} className="rounded p-1 text-primary-400 hover:text-primary-700">
@@ -419,16 +440,16 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <Badge variant="neutral">{typeConfig[doc.type].label}</Badge>
+                      <Badge variant="neutral">{getTypeLabel(doc.type, t)}</Badge>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className={cn('inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium', classificationConfig[doc.classification].color)}>
-                        {classificationConfig[doc.classification].label}
+                        {getClassificationLabel(doc.classification, t)}
                       </span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <Badge variant="neutral" className={statusConfig[doc.status].color} dot>
-                        {statusConfig[doc.status].label}
+                        {getStatusLabel(doc.status, t)}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell text-xs text-neutral-500">{formatBytes(doc.fileSize)}</td>
@@ -507,9 +528,9 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                   </div>
                   <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">{doc.title}</h3>
                   <div className="mt-2 flex items-center gap-2 flex-wrap">
-                    <Badge variant="neutral">{typeConfig[doc.type].label}</Badge>
+                    <Badge variant="neutral">{getTypeLabel(doc.type, t)}</Badge>
                     <Badge variant="neutral" className={statusConfig[doc.status].color} dot>
-                      {statusConfig[doc.status].label}
+                      {getStatusLabel(doc.status, t)}
                     </Badge>
                   </div>
                   <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">

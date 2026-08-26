@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { useStore } from '@/store/StoreContext';
+import { useTranslation } from '@/lib/i18n';
 import { api } from '@/lib/api';
 import {
   statusConfig,
@@ -42,6 +43,7 @@ import {
   cn,
 } from '@/lib/utils';
 import { useToast } from '@/lib/toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DocumentPreview } from '@/components/DocumentPreview';
 import { ReasoningTrace } from '@/components/ReasoningTrace';
 import { DocumentAskAI } from '@/components/DocumentAskAI';
@@ -56,12 +58,14 @@ interface DocumentDetailPageProps {
 type Tab = 'overview' | 'metadata' | 'insights' | 'versions' | 'activity' | 'permissions';
 
 export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: DocumentDetailPageProps) {
+  const { t } = useTranslation();
   const { documents, departments, users, updateDocument, deleteDocument, refreshData } = useStore();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('overview');
   const [showShare, setShowShare] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
 
   const department = departments.find((d) => d.id === doc.departmentId);
   const relatedDocs = documents.filter((d) => doc.relatedDocIds.includes(d.id));
@@ -69,12 +73,12 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   const sharedUsers = users.filter((u) => doc.sharedWith.includes(u.email) || doc.sharedWith.includes(u.id));
 
   const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
-    { key: 'overview', label: 'Overview', icon: FileText },
-    { key: 'metadata', label: 'Metadata', icon: Tag },
-    { key: 'insights', label: 'AI Insights', icon: Sparkles },
-    { key: 'versions', label: 'Versions', icon: History },
-    { key: 'activity', label: 'Activity', icon: Activity },
-    { key: 'permissions', label: 'Permissions', icon: Lock },
+    { key: 'overview', label: t('view'), icon: FileText },
+    { key: 'metadata', label: t('metadata'), icon: Tag },
+    { key: 'insights', label: t('aiInsightsDoc'), icon: Sparkles },
+    { key: 'versions', label: t('versions'), icon: History },
+    { key: 'activity', label: t('activity'), icon: Activity },
+    { key: 'permissions', label: t('permissions'), icon: Lock },
   ];
 
   const handleShare = async () => {
@@ -89,7 +93,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
   const handleDownload = async () => {
     if (!doc.filePath) {
-      toast('warning', 'This document has no file attached.');
+      toast('warning', t('noDocuments'));
       return;
     }
     try {
@@ -109,7 +113,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Download failed:', err);
-      toast('error', 'Failed to download file.');
+      toast('error', t('error'));
     }
   };
 
@@ -119,23 +123,29 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   };
 
   const handleDelete = async () => {
-    if (doc.legalHold) { toast('warning', 'Cannot delete a document under legal hold.'); return; }
-    if (!window.confirm(`Move "${doc.title}" to trash?`)) return;
-    try {
-      await deleteDocument(doc.id);
-      toast('success', 'Document moved to trash');
-      onBack();
-    } catch (e: unknown) {
-      toast('error', e instanceof Error ? e.message : 'Delete failed');
-    }
+    if (doc.legalHold) { toast('warning', t('legalHolds')); return; }
+    setConfirm({
+      open: true,
+      message: `${t('delete')} "${doc.title}"?`,
+      onConfirm: async () => {
+        try {
+          await deleteDocument(doc.id);
+          toast('success', t('documentDeleted'));
+          onBack();
+        } catch (e: unknown) {
+          toast('error', e instanceof Error ? e.message : t('error'));
+        }
+      },
+    });
   };
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
       {/* Breadcrumb / back */}
       <div className="flex items-center gap-2">
         <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to documents
+          <ArrowLeft className="h-4 w-4" /> {t('back')} {t('documents')}
         </button>
       </div>
 
@@ -150,7 +160,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
               <h1 className="text-xl font-bold text-neutral-900 truncate">{doc.title}</h1>
               {doc.legalHold && (
                 <Badge variant="error" className="shrink-0">
-                  <Shield className="h-3 w-3" /> Legal Hold
+                  <Shield className="h-3 w-3" /> {t('legalHolds')}
                 </Badge>
               )}
             </div>
@@ -165,7 +175,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
               <span className="text-xs text-neutral-400">·</span>
               <span className="text-xs text-neutral-500">{formatBytes(doc.fileSize)}</span>
               <span className="text-xs text-neutral-400">·</span>
-              <span className="text-xs text-neutral-500">{doc.pageCount} pages</span>
+              <span className="text-xs text-neutral-500">{doc.pageCount} {t('documents')}</span>
               <span className="text-xs text-neutral-400">·</span>
               <span className="text-xs text-neutral-500">{languageConfig[doc.language]}</span>
             </div>
@@ -174,12 +184,12 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
         <div className="flex items-center gap-2 shrink-0 relative">
           <div>
             <Button variant="outline" size="sm" icon={<Share2 className="h-3.5 w-3.5" />} onClick={() => setShowShare(!showShare)}>
-              Share
+              {t('export')}
             </Button>
             {showShare && (
               <div className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl border border-neutral-200 bg-white p-4 shadow-lg">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-neutral-900">Share document</p>
+                  <p className="text-sm font-medium text-neutral-900">{t('export')} {t('documents')}</p>
                   <button onClick={() => setShowShare(false)} className="text-neutral-400 hover:text-neutral-600">
                     <X className="h-4 w-4" />
                   </button>
@@ -187,19 +197,19 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                 <div className="flex items-center gap-2">
                   <input
                     type="email"
-                    placeholder="Email address"
+                    placeholder={t('email')}
                     value={shareEmail}
                     onChange={(e) => setShareEmail(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleShare()}
                     className="flex-1 rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400"
                   />
                   <Button variant="primary" size="sm" onClick={handleShare}>
-                    Add
+                    {t('save')}
                   </Button>
                 </div>
                 {doc.sharedWith.length > 0 && (
                   <div className="mt-3 border-t border-neutral-100 pt-3 space-y-2">
-                    <p className="text-xs text-neutral-400">Currently shared with:</p>
+                    <p className="text-xs text-neutral-400">{t('team')}:</p>
                     {doc.sharedWith.map((email) => (
                       <div key={email} className="flex items-center gap-2 text-xs text-neutral-600">
                         <div className="h-5 w-5 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-[10px] font-medium">
@@ -214,10 +224,10 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
             )}
           </div>
           <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleDownload}>
-            Download
+            {t('download')}
           </Button>
           <Button variant="ghost" size="sm" icon={<Trash2 className="h-3.5 w-3.5" />} onClick={handleDelete}>
-            Delete
+            {t('delete')}
           </Button>
         </div>
       </div>
@@ -230,7 +240,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
               {showPreview ? (
                 <div className="w-full space-y-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-neutral-900">Document Preview</p>
+                    <p className="text-sm font-semibold text-neutral-900">{t('view')}</p>
                     <button onClick={() => setShowPreview(false)} className="text-neutral-400 hover:text-neutral-600">
                       <X className="h-4 w-4" />
                     </button>
@@ -247,33 +257,33 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">Classification</p>
+                        <p className="text-neutral-400">{t('classification')}</p>
                         <p className="font-medium text-neutral-900 mt-0.5">{classificationConfig[doc.classification].label}</p>
                       </div>
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">Status</p>
+                        <p className="text-neutral-400">{t('status')}</p>
                         <p className="font-medium text-neutral-900 mt-0.5">{statusConfig[doc.status].label}</p>
                       </div>
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">Pages</p>
+                        <p className="text-neutral-400">{t('documents')}</p>
                         <p className="font-medium text-neutral-900 mt-0.5">{doc.pageCount}</p>
                       </div>
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">Size</p>
+                        <p className="text-neutral-400">{t('fileSize')}</p>
                         <p className="font-medium text-neutral-900 mt-0.5">{formatBytes(doc.fileSize)}</p>
                       </div>
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">Version</p>
+                        <p className="text-neutral-400">{t('version')}</p>
                         <p className="font-medium text-neutral-900 mt-0.5">v{doc.version}</p>
                       </div>
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">Language</p>
+                        <p className="text-neutral-400">{t('language')}</p>
                         <p className="font-medium text-neutral-900 mt-0.5">{languageConfig[doc.language]}</p>
                       </div>
                     </div>
                     {doc.tags.length > 0 && (
                       <div>
-                        <p className="text-neutral-400 text-xs mb-1">Tags</p>
+                        <p className="text-neutral-400 text-xs mb-1">{t('tags')}</p>
                         <div className="flex flex-wrap gap-1">
                           {doc.tags.map((tag) => (
                             <span key={tag} className="rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-700">#{tag}</span>
@@ -288,12 +298,12 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                   <div className="flex h-20 w-16 items-center justify-center rounded-lg bg-neutral-100">
                     <FileText className="h-10 w-10 text-neutral-300" />
                   </div>
-                  <p className="mt-4 text-sm font-medium text-neutral-600">Document preview</p>
+                  <p className="mt-4 text-sm font-medium text-neutral-600">{t('view')}</p>
                   <p className="mt-1 text-xs text-neutral-400 text-center max-w-xs">
-                    Secure preview is generated server-side with signed URLs. {doc.pageCount} pages.
+                    {t('view')} — {doc.pageCount} {t('documents')}
                   </p>
                   <Button variant="outline" size="sm" className="mt-4" icon={<FileText className="h-3.5 w-3.5" />} onClick={() => setShowPreview(true)}>
-                    Open Document
+                    {t('view')}
                   </Button>
                 </>
               )}
@@ -305,23 +315,23 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
       <div className="lg:col-span-2 space-y-4">
         {/* Tab bar */}
         <div role="tablist" className="flex items-center gap-1 overflow-x-auto border-b border-neutral-200">
-          {tabs.map((t) => {
-            const Icon = t.icon;
+          {tabs.map((tabItem) => {
+            const Icon = tabItem.icon;
             return (
               <button
-                key={t.key}
+                key={tabItem.key}
                 role="tab"
-                aria-selected={tab === t.key}
-                onClick={() => setTab(t.key)}
+                aria-selected={tab === tabItem.key}
+                onClick={() => setTab(tabItem.key)}
                 className={cn(
                   'flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors whitespace-nowrap focus-ring',
-                  tab === t.key
+                  tab === tabItem.key
                     ? 'border-primary-600 text-primary-700'
                     : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:border-neutral-200'
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {t.label}
+                {tabItem.label}
               </button>
             );
           })}
@@ -331,34 +341,34 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
         {tab === 'overview' && (
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle>Document Information</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t('metadata')}</CardTitle></CardHeader>
               <CardBody className="grid grid-cols-2 gap-4">
-                <InfoRow icon={<FileText className="h-3.5 w-3.5" />} label="Type" value={typeConfig[doc.type].label} />
-                <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label="Department" value={department?.name || 'Unassigned'} />
-                <InfoRow icon={<UserIcon className="h-3.5 w-3.5" />} label="Uploaded by" value={doc.uploadedBy} />
-                <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label="Uploaded" value={formatDate(doc.uploadedAt)} />
-                <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label="Modified" value={formatDate(doc.modifiedAt)} />
+                <InfoRow icon={<FileText className="h-3.5 w-3.5" />} label={t('documentType')} value={typeConfig[doc.type].label} />
+                <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department?.name || t('noDocuments')} />
+                <InfoRow icon={<UserIcon className="h-3.5 w-3.5" />} label={t('fullName')} value={doc.uploadedBy} />
+                <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label={t('uploadedAt')} value={formatDate(doc.uploadedAt)} />
+                <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label={t('uploadedAt')} value={formatDate(doc.modifiedAt)} />
                 <div className="flex items-start gap-2">
                   <Hash className="h-3.5 w-3.5 text-neutral-400 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-neutral-500">SHA-256</p>
-                    <p className="text-xs font-mono text-neutral-900 break-all" title={doc.hash || 'not computed yet'}>
-                      {doc.hash ? `${doc.hash.slice(0, 16)}…${doc.hash.slice(-8)}` : 'pending — upload not hashed'}
+                    <p className="text-xs font-mono text-neutral-900 break-all" title={doc.hash || t('processing')}>
+                      {doc.hash ? `${doc.hash.slice(0, 16)}…${doc.hash.slice(-8)}` : t('processing')}
                     </p>
-                    {doc.hash && doc.hash.length === 64 && <span className="text-[10px] text-success-600">✓ verified 64-char hash</span>}
+                    {doc.hash && doc.hash.length === 64 && <span className="text-[10px] text-success-600">✓ {t('success')}</span>}
                   </div>
                   {doc.hash && (
-                    <button onClick={() => { navigator.clipboard.writeText(doc.hash); toast('success', 'Hash copied'); }} className="text-xs text-primary-600 hover:text-primary-700 shrink-0">Copy</button>
+                    <button onClick={() => { navigator.clipboard.writeText(doc.hash); toast('success', t('success')); }} className="text-xs text-primary-600 hover:text-primary-700 shrink-0">{t('view')}</button>
                   )}
                 </div>
-                <InfoRow icon={<Tag className="h-3.5 w-3.5" />} label="Version" value={`v${doc.version}`} />
-                <InfoRow icon={<Activity className="h-3.5 w-3.5" />} label="Status" value={statusConfig[doc.status].label} />
+                <InfoRow icon={<Tag className="h-3.5 w-3.5" />} label={t('version')} value={`v${doc.version}`} />
+                <InfoRow icon={<Activity className="h-3.5 w-3.5" />} label={t('status')} value={statusConfig[doc.status].label} />
               </CardBody>
             </Card>
 
             {doc.tags.length > 0 && (
               <Card>
-                <CardHeader><CardTitle>Tags</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('tags')}</CardTitle></CardHeader>
                 <CardBody className="flex flex-wrap gap-2">
                   {doc.tags.map((tag) => (
                     <Badge key={tag} variant="default">#{tag}</Badge>
@@ -369,7 +379,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
             {(doc.filePath || doc.fileType) && (
               <Card>
-                <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('view')}</CardTitle></CardHeader>
                 <CardBody>
                   <DocumentPreview docId={doc.id} fileType={doc.fileType} title={doc.title} />
                 </CardBody>
@@ -378,7 +388,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
             {relatedDocs.length > 0 && (
               <Card>
-                <CardHeader><CardTitle>Related Documents</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('allDocuments')}</CardTitle></CardHeader>
                 <CardBody className="p-0">
                   <div className="divide-y divide-neutral-50">
                     {relatedDocs.map((rel) => (
@@ -406,10 +416,10 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
         {tab === 'metadata' && (
           <Card>
-            <CardHeader><CardTitle>Extracted Metadata</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t('metadata')}</CardTitle></CardHeader>
             <CardBody className="space-y-3">
               {Object.entries(doc.metadata).length === 0 ? (
-                <p className="text-sm text-neutral-400">No metadata extracted yet.</p>
+                <p className="text-sm text-neutral-400">{t('noDocuments')}</p>
               ) : (
                 Object.entries(doc.metadata).map(([key, value]) => (
                   <div key={key} className="flex items-center justify-between border-b border-neutral-50 pb-2">
@@ -425,7 +435,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
               {doc.insight && (
                 <>
                   <div className="pt-3">
-                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">AI-Extracted Entities</p>
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('aiInsights')}</p>
                     <div className="space-y-2">
                       {doc.insight.keyEntities.map((entity: unknown, i: number) => {
                         const e = entity as { type?: string; value?: string; confidence?: number } | string;
@@ -465,10 +475,10 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-primary-600" />
-                        <CardTitle>AI Summary</CardTitle>
+                        <CardTitle>{t('aiInsightsDoc')}</CardTitle>
                       </div>
                       <Badge variant={doc.insight.confidence > 0.9 ? 'success' : 'warning'}>
-                        {Math.round(doc.insight.confidence * 100)}% confidence
+                        {Math.round(doc.insight.confidence * 100)}% {t('success')}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -482,7 +492,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-accent-600" />
-                        <CardTitle>Important Dates</CardTitle>
+                        <CardTitle>{t('uploadedAt')}</CardTitle>
                       </div>
                     </CardHeader>
                     <CardBody className="space-y-2">
@@ -512,7 +522,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4 text-warning-600" />
-                        <CardTitle>Detected Risks</CardTitle>
+                        <CardTitle>{t('error')}</CardTitle>
                       </div>
                     </CardHeader>
                     <CardBody className="space-y-2">
@@ -531,7 +541,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     <CardHeader>
                       <div className="flex items-center gap-2">
                         <XCircle className="h-4 w-4 text-error-600" />
-                        <CardTitle>Missing Information</CardTitle>
+                        <CardTitle>{t('error')}</CardTitle>
                       </div>
                     </CardHeader>
                     <CardBody className="space-y-2">
@@ -547,7 +557,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
                 {doc.insight.suggestedTags.length > 0 && (
                   <Card>
-                    <CardHeader><CardTitle>Suggested Tags</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>{t('tags')}</CardTitle></CardHeader>
                     <CardBody>
                       <div className="flex flex-wrap gap-2">
                         {doc.insight.suggestedTags.map((tag) => {
@@ -587,9 +597,9 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400 mb-4">
                     <Sparkles className="h-7 w-7" />
                   </div>
-                  <p className="text-sm font-medium text-neutral-600">No AI analysis yet</p>
+                  <p className="text-sm font-medium text-neutral-600">{t('aiInsights')}</p>
                   <p className="mt-1 text-xs text-neutral-400 max-w-sm text-center mb-4">
-                    Run AI analysis to get insights, key entities, risks, and suggested tags for this document.
+                    {t('aiInsights')}
                   </p>
                   <Button
                     variant="primary"
@@ -603,17 +613,17 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                           headers: token ? { Authorization: `Bearer ${token}` } : {},
                         });
                         if (res.ok) {
-                          toast('success', 'Analysis complete — refreshing...');
+                          toast('success', t('success'));
                           await refreshData();
                         } else {
-                          toast('error', 'Analysis failed. Please try again.');
+                          toast('error', t('error'));
                         }
                       } catch {
-                        toast('error', 'Analysis failed. Please try again.');
+                        toast('error', t('error'));
                       }
                     }}
                   >
-                    Run AI Analysis
+                    {t('aiInsights')}
                   </Button>
                 </CardBody>
               </Card>
@@ -625,10 +635,10 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
         {tab === 'versions' && (
           <Card>
-            <CardHeader><CardTitle>Version History</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t('versions')}</CardTitle></CardHeader>
             <CardBody className="p-0">
               <div className="divide-y divide-neutral-50">
-                {(doc.versions.length > 0 ? [...doc.versions] : [{ version: doc.version, changes: 'Initial upload', uploadedBy: doc.uploadedBy, uploadedAt: doc.uploadedAt, fileSize: doc.fileSize }]).reverse().map((v) => (
+                {(doc.versions.length > 0 ? [...doc.versions] : [{ version: doc.version, changes: t('uploadSuccess'), uploadedBy: doc.uploadedBy, uploadedAt: doc.uploadedAt, fileSize: doc.fileSize }]).reverse().map((v) => (
                   <div key={v.version} className="flex items-start gap-3 px-5 py-4">
                     <div className={cn(
                       'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold',
@@ -648,10 +658,10 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                       </div>
                     </div>
                     {v.version === doc.version ? (
-                      <Badge variant="success">Current</Badge>
+                      <Badge variant="success">{t('success')}</Badge>
                     ) : (
                       <Button variant="ghost" size="sm" onClick={() => handleRestore(v.version)}>
-                        Restore
+                        {t('back')}
                       </Button>
                     )}
                   </div>
@@ -663,14 +673,14 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
         {tab === 'activity' && (
           <Card>
-            <CardHeader><CardTitle>Activity Timeline</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t('activity')}</CardTitle></CardHeader>
             <CardBody className="p-0">
               <div className="divide-y divide-neutral-50">
                 {[
-                  { action: 'Document uploaded', user: doc.uploadedBy, date: doc.uploadedAt, icon: FileText },
-                  { action: 'OCR completed', user: 'SADI AI', date: new Date(new Date(doc.uploadedAt).getTime() + 90_000).toISOString(), icon: FileText },
-                  { action: 'AI analysis completed', user: 'SADI AI', date: doc.modifiedAt, icon: Sparkles },
-                  ...(doc.legalHold ? [{ action: 'Legal hold applied', user: 'Amira Benali', date: doc.modifiedAt, icon: Shield }] : []),
+                  { action: t('uploadSuccess'), user: doc.uploadedBy, date: doc.uploadedAt, icon: FileText },
+                  { action: t('processing'), user: 'SADI AI', date: new Date(new Date(doc.uploadedAt).getTime() + 90_000).toISOString(), icon: FileText },
+                  { action: t('aiInsights'), user: 'SADI AI', date: doc.modifiedAt, icon: Sparkles },
+                  ...(doc.legalHold ? [{ action: t('legalHolds'), user: 'Amira Benali', date: doc.modifiedAt, icon: Shield }] : []),
                 ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((event, i) => {
                   const Icon = event.icon;
                   return (
@@ -693,12 +703,12 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
         {tab === 'permissions' && (
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle>Access Control</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t('permissions')}</CardTitle></CardHeader>
               <CardBody className="space-y-3">
                 <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                   <div className="flex items-center gap-2">
                     <Lock className="h-4 w-4 text-neutral-500" />
-                    <span className="text-sm font-medium text-neutral-700">Classification</span>
+                    <span className="text-sm font-medium text-neutral-700">{t('classification')}</span>
                   </div>
                   <span className={cn('inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium', classificationConfig[doc.classification].color)}>
                     {classificationConfig[doc.classification].label}
@@ -707,7 +717,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                 <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-neutral-500" />
-                    <span className="text-sm font-medium text-neutral-700">Archive State</span>
+                    <span className="text-sm font-medium text-neutral-700">{t('status')}</span>
                   </div>
                   <Badge variant="neutral" className={archiveConfig[doc.archiveState].color}>
                     {archiveConfig[doc.archiveState].label}
@@ -716,7 +726,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                 <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-neutral-500" />
-                    <span className="text-sm font-medium text-neutral-700">Approval</span>
+                    <span className="text-sm font-medium text-neutral-700">{t('confirm')}</span>
                   </div>
                   <Badge variant="neutral" className={approvalConfig[doc.approvalState].color}>
                     {approvalConfig[doc.approvalState].label}
@@ -726,16 +736,16 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                   <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-neutral-500" />
-                      <span className="text-sm font-medium text-neutral-700">Retention</span>
+                      <span className="text-sm font-medium text-neutral-700">{t('retentionPolicies')}</span>
                     </div>
-                    <span className="text-sm font-medium text-neutral-900">{doc.retentionYears} years</span>
+                    <span className="text-sm font-medium text-neutral-900">{doc.retentionYears} {t('retentionPolicies')}</span>
                   </div>
                 )}
                 {doc.expiresAt && (
                   <div className="flex items-center justify-between rounded-lg border border-neutral-100 px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-neutral-500" />
-                      <span className="text-sm font-medium text-neutral-700">Expires</span>
+                      <span className="text-sm font-medium text-neutral-700">{t('expiringSoon')}</span>
                     </div>
                     <span className="text-sm font-medium text-neutral-900">{formatDate(doc.expiresAt)}</span>
                   </div>
@@ -745,7 +755,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
             {sharedUsers.length > 0 && (
               <Card>
-                <CardHeader><CardTitle>Shared With</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t('team')}</CardTitle></CardHeader>
                 <CardBody className="space-y-2">
                   {sharedUsers.map((user) => (
                     <div key={user.id} className="flex items-center gap-3">
@@ -779,4 +789,3 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     </div>
   );
 }
-

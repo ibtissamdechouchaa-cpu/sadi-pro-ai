@@ -6,6 +6,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { analyzeDocument, generateSearchAnswer, geminiVisionChat } from "../lib/ai.js";
 import { extractFileText } from "../lib/fileExtractor.js";
+import { assertPermission, getRole, hasPermission } from "../lib/permissions.js";
 
 const data = new Hono();
 
@@ -22,6 +23,8 @@ function isValidFilePath(filePath: string, orgId: string): boolean {
 
 // --- File Upload ---
 data.post("/upload", async (c) => {
+  const perm = await assertPermission(c, "document.create");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const body = await c.req.parseBody();
   const file = body["file"];
@@ -33,6 +36,22 @@ data.post("/upload", async (c) => {
   const MAX_SIZE = 50 * 1024 * 1024; // 50 MB
   if (file.size > MAX_SIZE) {
     return c.json({ error: "File too large. Max 50 MB." }, 413);
+  }
+
+  // Org quota checks — storage and document count before mkdir
+  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  if (!org) return c.json({ error: "Organization not found" }, 404);
+  const agg = await prisma.document.aggregate({
+    where: { organizationId: orgId, deletedAt: null },
+    _sum: { fileSize: true },
+  });
+  const total = Number(agg._sum.fileSize || 0);
+  if (total + file.size > Number(org.maxStorageBytes)) {
+    return c.json({ error: "Storage quota exceeded" }, 413);
+  }
+  const docCount = await prisma.document.count({ where: { organizationId: orgId, deletedAt: null } });
+  if (docCount >= org.maxDocuments) {
+    return c.json({ error: "Document limit reached" }, 413);
   }
 
   const allowedExts = new Set(['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','png','jpg','jpeg','webp','tiff','tif','zip','json','xml','html']);
@@ -69,6 +88,8 @@ data.post("/upload", async (c) => {
 
 // --- File Download ---
 data.get("/download/:docId", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { docId } = c.req.param();
 
@@ -113,6 +134,8 @@ data.get("/download/:docId", async (c) => {
 
 // --- File Preview (inline, not download) ---
 data.get("/preview/:docId", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { docId } = c.req.param();
 
@@ -251,26 +274,30 @@ async function runPipelineForDocument(doc: { id: string; title: string; organiza
 }
 
 data.post("/documents", async (c) => {
+  const perm = await assertPermission(c, "document.create");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const body = await c.req.json<{ documents?: any[]; jobs?: any[]; activity?: any[] }>();
 
   const createdDocs: { id: string; title: string; organizationId: string; filePath?: string | null; fileType?: string | null }[] = [];
   if (body.documents?.length) {
     for (const doc of body.documents) {
+      // Strip filePath from client — must be set server-side via /upload, not client
+      const { filePath: _fp, organizationId: _org, ...rest } = doc as Record<string, unknown>;
       const created = await prisma.document.create({
         data: {
-          id: doc.id,
+          id: (rest as { id?: string }).id,
           organizationId: orgId,
-          title: doc.title,
-          type: doc.type || "other",
-          classification: doc.classification || "internal",
-          status: doc.status || "uploading",
-          fileSize: doc.fileSize || 0,
-          fileType: doc.fileType,
-          filePath: doc.filePath || null,
-          uploadedBy: doc.uploadedBy,
-          hash: doc.hash,
-          tags: doc.tags || [],
+          title: (rest as { title: string }).title,
+          type: (rest as { type?: string }).type || "other",
+          classification: (rest as { classification?: string }).classification || "internal",
+          status: (rest as { status?: string }).status || "uploading",
+          fileSize: (rest as { fileSize?: number | bigint }).fileSize || 0,
+          fileType: (rest as { fileType?: string }).fileType,
+          filePath: null,
+          uploadedBy: (rest as { uploadedBy?: string }).uploadedBy,
+          hash: (rest as { hash?: string }).hash,
+          tags: (rest as { tags?: string[] }).tags || [],
         },
       });
       createdDocs.push({ id: created.id, title: created.title, organizationId: orgId, filePath: created.filePath, fileType: created.fileType });
@@ -390,6 +417,8 @@ data.get("/documents/search", async (c) => {
 });
 
 data.patch("/documents/:id", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const body = await c.req.json();
@@ -397,18 +426,28 @@ data.patch("/documents/:id", async (c) => {
   const existing = await prisma.document.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
 
-  const { organizationId: _, ...updateData } = body;
+  if ("legalHold" in body || "retentionYears" in body) {
+    const comp = await assertPermission(c, "compliance.manage");
+    if (comp) return comp;
+  }
+
+  const { organizationId: _, filePath: _fp, ...updateData } = body;
   updateData.modifiedAt = new Date();
   const document = await prisma.document.update({ where: { id }, data: updateData });
   return c.json({ document });
 });
 
 data.delete("/documents/:id", async (c) => {
+  const perm = await assertPermission(c, "document.delete");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
 
   const existing = await prisma.document.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
+  if (existing.legalHold) {
+    return c.json({ error: "Document is under legal hold and cannot be deleted" }, 423);
+  }
 
   await prisma.document.update({ where: { id }, data: { deletedAt: new Date() } });
   return c.json({ ok: true });
@@ -426,6 +465,8 @@ data.get("/departments", async (c) => {
 });
 
 data.post("/departments", async (c) => {
+  const perm = await assertPermission(c, "team.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const body = await c.req.json<{ name: string; color?: string; id?: string }>();
   const department = await prisma.department.create({
@@ -440,6 +481,8 @@ data.post("/departments", async (c) => {
 });
 
 data.patch("/departments/:id", async (c) => {
+  const perm = await assertPermission(c, "team.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const body = await c.req.json();
@@ -451,6 +494,8 @@ data.patch("/departments/:id", async (c) => {
 });
 
 data.delete("/departments/:id", async (c) => {
+  const perm = await assertPermission(c, "team.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const existing = await prisma.department.findFirst({ where: { id, organizationId: orgId } });
@@ -529,20 +574,33 @@ data.get("/jobs", async (c) => {
 });
 
 data.post("/jobs", async (c) => {
+  // require document.update or audit.view — implement OR logic
+  const userId = c.get("userId");
+  const role = await getRole(userId);
+  if (!hasPermission(role, "document.update") && !hasPermission(role, "audit.view")) {
+    return c.json({ error: "Forbidden: missing document.update or audit.view" }, 403);
+  }
   const orgId = c.get("orgId");
   const body = await c.req.json();
+  const { organizationId: _org, ...safeBody } = body;
   const job = await prisma.processingJob.create({
-    data: { organizationId: orgId, ...body },
+    data: { organizationId: orgId, ...safeBody },
   });
   return c.json({ job }, 201);
 });
 
 data.patch("/jobs/:id", async (c) => {
+  const userId = c.get("userId");
+  const role = await getRole(userId);
+  if (!hasPermission(role, "document.update") && !hasPermission(role, "audit.view")) {
+    return c.json({ error: "Forbidden: missing document.update or audit.view" }, 403);
+  }
   const { id } = c.req.param();
   const body = await c.req.json();
-  const job = await prisma.processingJob.update({ where: { id }, data: body });
+  const { organizationId: _org, ...safeBody } = body;
+  const job = await prisma.processingJob.update({ where: { id }, data: safeBody });
   // Retry: if stage was reset to queued, re-run pipeline from that stage
-  if (body.stage === 'queued' && job.documentId) {
+  if (safeBody.stage === 'queued' && job.documentId) {
     const doc = await prisma.document.findUnique({ where: { id: job.documentId } });
     if (doc) runPipelineForDocument({ id: doc.id, title: doc.title, organizationId: job.organizationId, filePath: doc.filePath, fileType: doc.fileType }).catch(() => {});
   }
@@ -550,6 +608,11 @@ data.patch("/jobs/:id", async (c) => {
 });
 
 data.delete("/jobs/:id", async (c) => {
+  const userId = c.get("userId");
+  const role = await getRole(userId);
+  if (!hasPermission(role, "document.update") && !hasPermission(role, "audit.view")) {
+    return c.json({ error: "Forbidden: missing document.update or audit.view" }, 403);
+  }
   const { id } = c.req.param();
   await prisma.processingJob.delete({ where: { id } });
   return c.json({ ok: true });
@@ -567,6 +630,8 @@ data.get("/collections", async (c) => {
 });
 
 data.post("/collections", async (c) => {
+  const perm = await assertPermission(c, "document.create");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const userId = c.get("userId");
   const body = await c.req.json<{ name: string; description?: string }>();
@@ -582,16 +647,21 @@ data.post("/collections", async (c) => {
 });
 
 data.patch("/collections/:id", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const body = await c.req.json();
   const existing = await prisma.collection.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
-  const collection = await prisma.collection.update({ where: { id }, data: body });
+  const { organizationId: _org, ...safeBody } = body;
+  const collection = await prisma.collection.update({ where: { id }, data: safeBody });
   return c.json({ collection });
 });
 
 data.delete("/collections/:id", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const existing = await prisma.collection.findFirst({ where: { id, organizationId: orgId } });
@@ -612,25 +682,33 @@ data.get("/retention-policies", async (c) => {
 });
 
 data.post("/retention-policies", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const body = await c.req.json();
+  const { organizationId: _org, ...safeBody } = body;
   const policy = await prisma.retentionPolicy.create({
-    data: { organizationId: orgId, ...body },
+    data: { organizationId: orgId, ...safeBody },
   });
   return c.json({ policy }, 201);
 });
 
 data.patch("/retention-policies/:id", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const body = await c.req.json();
   const existing = await prisma.retentionPolicy.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
-  const policy = await prisma.retentionPolicy.update({ where: { id }, data: body });
+  const { organizationId: _org, ...safeBody } = body;
+  const policy = await prisma.retentionPolicy.update({ where: { id }, data: safeBody });
   return c.json({ policy });
 });
 
 data.delete("/retention-policies/:id", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const existing = await prisma.retentionPolicy.findFirst({ where: { id, organizationId: orgId } });
@@ -642,6 +720,8 @@ data.delete("/retention-policies/:id", async (c) => {
 // --- Audit Logs ---
 
 data.get("/audit-logs", async (c) => {
+  const perm = await assertPermission(c, "audit.view");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const logs = await prisma.auditLog.findMany({
     where: { organizationId: orgId },
@@ -651,19 +731,13 @@ data.get("/audit-logs", async (c) => {
   return c.json({ logs });
 });
 
-data.post("/audit-logs", async (c) => {
-  const orgId = c.get("orgId");
-  const userId = c.get("userId");
-  const body = await c.req.json();
-  const log = await prisma.auditLog.create({
-    data: { organizationId: orgId, userId, ...body },
-  });
-  return c.json({ log }, 201);
-});
+// POST /audit-logs removed — audit forgery prevention
 
 // --- Users (profiles) ---
 
 data.get("/users", async (c) => {
+  const perm = await assertPermission(c, "team.view");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const users = await prisma.profile.findMany({
     where: { organizationId: orgId, isActive: true },
@@ -683,8 +757,17 @@ data.get("/users", async (c) => {
 });
 
 data.post("/users", async (c) => {
+  const perm = await assertPermission(c, "team.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const body = await c.req.json<{ email: string; fullName?: string; role?: string }>();
+  // Enforce maxUsers quota
+  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  if (!org) return c.json({ error: "Organization not found" }, 404);
+  const userCount = await prisma.profile.count({ where: { organizationId: orgId, isActive: true } });
+  if (userCount >= org.maxUsers) {
+    return c.json({ error: "User limit reached" }, 413);
+  }
   const bcrypt = await import("bcryptjs");
   const passwordHash = await bcrypt.hash("welcome123", 10);
   const user = await prisma.profile.create({
@@ -702,20 +785,46 @@ data.post("/users", async (c) => {
 });
 
 data.patch("/users/:id", async (c) => {
+  const perm = await assertPermission(c, "team.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const body = await c.req.json();
   const existing = await prisma.profile.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
-  const { passwordHash: _, ...updated } = await prisma.profile.update({ where: { id }, data: body });
+  // Whitelist body to only role, departmentId, isActive
+  const allowed: Record<string, unknown> = {};
+  if ("role" in body) allowed.role = body.role;
+  if ("departmentId" in body) allowed.departmentId = body.departmentId;
+  if ("isActive" in body) allowed.isActive = body.isActive;
+  // Enforce maxUsers quota if activating
+  if (allowed.isActive === true && !existing.isActive) {
+    const org = await prisma.organization.findUnique({ where: { id: orgId } });
+    if (org) {
+      const userCount = await prisma.profile.count({ where: { organizationId: orgId, isActive: true } });
+      if (userCount >= org.maxUsers) {
+        return c.json({ error: "User limit reached" }, 413);
+      }
+    }
+  }
+  const { passwordHash: _, ...updated } = await prisma.profile.update({ where: { id }, data: allowed });
   return c.json({ user: updated });
 });
 
 data.delete("/users/:id", async (c) => {
+  const perm = await assertPermission(c, "team.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
+  const userId = c.get("userId");
   const { id } = c.req.param();
+  if (id === userId) {
+    return c.json({ error: "Cannot delete yourself" }, 400);
+  }
   const existing = await prisma.profile.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
+  if (existing.role === "owner") {
+    return c.json({ error: "Cannot delete owner" }, 403);
+  }
   await prisma.profile.update({ where: { id }, data: { isActive: false } });
   return c.json({ ok: true });
 });
@@ -729,9 +838,21 @@ data.get("/organization", async (c) => {
 });
 
 data.patch("/organization", async (c) => {
+  const userId = c.get("userId");
+  const role = await getRole(userId);
+  if (!hasPermission(role, "org.manage") && !hasPermission(role, "billing.manage")) {
+    return c.json({ error: "Forbidden: missing org.manage or billing.manage" }, 403);
+  }
   const orgId = c.get("orgId");
   const body = await c.req.json();
-  const organization = await prisma.organization.update({ where: { id: orgId }, data: body });
+  const allowedKeys = ['name','industry','country','timezone','defaultLanguage','logoUrl','settings'];
+  const filtered: Record<string, unknown> = {};
+  for (const key of allowedKeys) {
+    if (key in body) filtered[key] = body[key];
+  }
+  // Reject protected fields if present — explicitly ignore them
+  // planTier, maxUsers, maxStorageBytes, slug, subscriptionState are not allowed
+  const organization = await prisma.organization.update({ where: { id: orgId }, data: filtered });
   return c.json({ organization });
 });
 
@@ -747,32 +868,40 @@ data.get("/workflows", async (c) => {
 });
 
 data.post("/workflows", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const body = await c.req.json<{ name: string; description?: string; triggerType: string; conditions?: unknown; actions?: unknown }>();
+  const { organizationId: _org, ...safeBody } = body as Record<string, unknown>;
   const workflow = await prisma.workflow.create({
     data: {
       organizationId: orgId,
-      name: body.name,
-      description: body.description,
-      triggerType: body.triggerType,
-      conditions: body.conditions || {},
-      actions: body.actions || [],
+      name: (safeBody as { name: string }).name,
+      description: (safeBody as { description?: string }).description,
+      triggerType: (safeBody as { triggerType: string }).triggerType,
+      conditions: (safeBody as { conditions?: unknown }).conditions || {},
+      actions: (safeBody as { actions?: unknown }).actions || [],
     },
   });
   return c.json({ workflow }, 201);
 });
 
 data.patch("/workflows/:id", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const body = await c.req.json();
   const existing = await prisma.workflow.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
-  const workflow = await prisma.workflow.update({ where: { id }, data: body });
+  const { organizationId: _org, ...safeBody } = body;
+  const workflow = await prisma.workflow.update({ where: { id }, data: safeBody });
   return c.json({ workflow });
 });
 
 data.delete("/workflows/:id", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const existing = await prisma.workflow.findFirst({ where: { id, organizationId: orgId } });
@@ -813,6 +942,8 @@ data.post("/search-suggestions", async (c) => {
 // --- AI Analysis ---
 
 data.post("/documents/:id/analyze", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
 
@@ -834,6 +965,8 @@ data.post("/documents/:id/analyze", async (c) => {
 });
 
 data.post("/search/ai-answer", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { query } = await c.req.json<{ query: string }>();
 
@@ -900,6 +1033,8 @@ data.post("/search/ai-answer", async (c) => {
 // --- Document Processing Pipeline ---
 
 data.post("/documents/:id/process", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
 
@@ -959,6 +1094,8 @@ data.post("/documents/:id/process", async (c) => {
 
 // --- Ask AI about a document (Vision + text) ---
 data.post("/documents/:id/ask", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
   const { question } = await c.req.json<{ question: string }>();

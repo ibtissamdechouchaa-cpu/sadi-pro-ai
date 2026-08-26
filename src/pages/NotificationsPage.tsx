@@ -1,11 +1,13 @@
-import { Bell, CheckCheck, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStore } from '@/store/StoreContext';
 import { timeAgo, cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 export function NotificationsPage() {
+  const { t } = useTranslation();
   const { notifications, markNotificationRead, markAllNotificationsRead } = useStore();
   const unread = notifications.filter((n) => !n.read);
 
@@ -13,23 +15,23 @@ export function NotificationsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
-          <p className="mt-1 text-sm text-neutral-500">{unread.length} unread · {notifications.length} total</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('notifications')}</h1>
+          <p className="mt-1 text-sm text-neutral-500">{unread.length} {t('notifications')} · {notifications.length} {t('allDocuments')}</p>
         </div>
         {unread.length > 0 && (
           <Button variant="outline" size="sm" icon={<CheckCheck className="h-4 w-4" />} onClick={markAllNotificationsRead}>
-            Mark all read
+            {t('confirm')}
           </Button>
         )}
       </div>
 
       {notifications.length === 0 ? (
         <Card>
-          <EmptyState icon={<Bell className="h-8 w-8" />} title="No notifications" description="You're all caught up. Notifications about document activity, approvals and system alerts will appear here." />
+          <EmptyState icon={<Bell className="h-8 w-8" />} title={t('notifications')} description={t('notifications')} />
         </Card>
       ) : (
         <Card>
-          <CardHeader><CardTitle>Recent</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t('recentActivity')}</CardTitle></CardHeader>
           <CardBody className="p-0">
             <div className="divide-y divide-neutral-50">
               {notifications.map((n) => (
@@ -42,7 +44,7 @@ export function NotificationsPage() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {!n.read && (
-                      <Button variant="ghost" size="sm" onClick={() => markNotificationRead(n.id)}>Mark read</Button>
+                      <Button variant="ghost" size="sm" onClick={() => markNotificationRead(n.id)}>{t('view')}</Button>
                     )}
                   </div>
                 </div>

@@ -107,6 +107,72 @@ type TranslationKeys = {
   processingStarted: string;
   documentArchived: string;
   documentDeleted: string;
+
+  // AI Assistant
+  aiAssistant: string;
+  askAboutDocs: string;
+  askSadi: string;
+
+  // Status
+  statusUploading: string;
+  statusQueued: string;
+  statusProcessing: string;
+  statusExtracting: string;
+  statusIndexing: string;
+  statusAnalyzing: string;
+  statusCompleted: string;
+  statusFailed: string;
+  statusQuarantined: string;
+
+  // Type
+  typeContract: string;
+  typeInvoice: string;
+  typeReport: string;
+  typeCertificate: string;
+  typeLetter: string;
+  typeId: string;
+  typePolicy: string;
+  typeLegal: string;
+  typeHr: string;
+  typeFinancial: string;
+  typeTechnical: string;
+  typeOther: string;
+
+  // Classification
+  classificationPublic: string;
+  classificationInternal: string;
+  classificationConfidential: string;
+  classificationHighlyConfidential: string;
+
+  // Archive
+  archiveActive: string;
+  archiveInactive: string;
+  archiveArchived: string;
+  archiveOnHold: string;
+  archivePendingDisposal: string;
+  archiveDisposed: string;
+
+  // Approval
+  approvalDraft: string;
+  approvalPendingReview: string;
+  approvalApproved: string;
+  approvalRejected: string;
+  approvalArchived: string;
+
+  // Language
+  langAr: string;
+  langFr: string;
+  langEn: string;
+  langUnknown: string;
+
+  // Roles
+  roleOwner: string;
+  roleAdmin: string;
+  roleManager: string;
+  roleEditor: string;
+  roleReviewer: string;
+  roleViewer: string;
+  roleAuditor: string;
 };
 
 const translations: Record<Locale, TranslationKeys> = {
@@ -209,6 +275,64 @@ const translations: Record<Locale, TranslationKeys> = {
     processingStarted: 'Processing started',
     documentArchived: 'Document archived',
     documentDeleted: 'Document moved to trash',
+
+    aiAssistant: 'AI Assistant',
+    askAboutDocs: 'Ask questions about your documents in natural language.',
+    askSadi: 'Ask SADI AI',
+
+    statusUploading: 'Uploading',
+    statusQueued: 'Queued',
+    statusProcessing: 'Processing',
+    statusExtracting: 'Extracting',
+    statusIndexing: 'Indexing',
+    statusAnalyzing: 'Analyzing',
+    statusCompleted: 'Completed',
+    statusFailed: 'Failed',
+    statusQuarantined: 'Quarantined',
+
+    typeContract: 'Contract',
+    typeInvoice: 'Invoice',
+    typeReport: 'Report',
+    typeCertificate: 'Certificate',
+    typeLetter: 'Letter',
+    typeId: 'ID Document',
+    typePolicy: 'Policy',
+    typeLegal: 'Legal Document',
+    typeHr: 'HR Document',
+    typeFinancial: 'Financial',
+    typeTechnical: 'Technical',
+    typeOther: 'Other',
+
+    classificationPublic: 'Public',
+    classificationInternal: 'Internal',
+    classificationConfidential: 'Confidential',
+    classificationHighlyConfidential: 'Highly Confidential',
+
+    archiveActive: 'Active',
+    archiveInactive: 'Inactive',
+    archiveArchived: 'Archived',
+    archiveOnHold: 'On Hold',
+    archivePendingDisposal: 'Pending Disposal',
+    archiveDisposed: 'Disposed',
+
+    approvalDraft: 'Draft',
+    approvalPendingReview: 'Pending Review',
+    approvalApproved: 'Approved',
+    approvalRejected: 'Rejected',
+    approvalArchived: 'Archived',
+
+    langAr: 'Arabic',
+    langFr: 'French',
+    langEn: 'English',
+    langUnknown: 'Unknown',
+
+    roleOwner: 'Owner',
+    roleAdmin: 'Admin',
+    roleManager: 'Manager',
+    roleEditor: 'Editor',
+    roleReviewer: 'Reviewer',
+    roleViewer: 'Viewer',
+    roleAuditor: 'Auditor',
   },
 
   ar: {
@@ -310,6 +434,64 @@ const translations: Record<Locale, TranslationKeys> = {
     processingStarted: 'بدأت المعالجة',
     documentArchived: 'تم أرشفة الوثيقة',
     documentDeleted: 'تم نقل الوثيقة إلى سلة المهملات',
+
+    aiAssistant: 'المساعد الذكي',
+    askAboutDocs: 'اطرح أسئلة حول مستنداتك بلغة طبيعية.',
+    askSadi: 'اسأل سادي AI',
+
+    statusUploading: 'جاري الرفع',
+    statusQueued: 'في الانتظار',
+    statusProcessing: 'قيد المعالجة',
+    statusExtracting: 'استخراج',
+    statusIndexing: 'فهرسة',
+    statusAnalyzing: 'تحليل',
+    statusCompleted: 'مكتمل',
+    statusFailed: 'فشل',
+    statusQuarantined: 'محجور',
+
+    typeContract: 'عقد',
+    typeInvoice: 'فاتورة',
+    typeReport: 'تقرير',
+    typeCertificate: 'شهادة',
+    typeLetter: 'رسالة',
+    typeId: 'وثيقة هوية',
+    typePolicy: 'سياسة',
+    typeLegal: 'وثيقة قانونية',
+    typeHr: 'وثيقة موارد بشرية',
+    typeFinancial: 'مالي',
+    typeTechnical: 'تقني',
+    typeOther: 'أخرى',
+
+    classificationPublic: 'عام',
+    classificationInternal: 'داخلي',
+    classificationConfidential: 'سري',
+    classificationHighlyConfidential: 'سري للغاية',
+
+    archiveActive: 'نشط',
+    archiveInactive: 'غير نشط',
+    archiveArchived: 'مؤرشف',
+    archiveOnHold: 'معلق',
+    archivePendingDisposal: 'بانتظار الإتلاف',
+    archiveDisposed: 'متلف',
+
+    approvalDraft: 'مسودة',
+    approvalPendingReview: 'بانتظار المراجعة',
+    approvalApproved: 'موافق عليه',
+    approvalRejected: 'مرفوض',
+    approvalArchived: 'مؤرشف',
+
+    langAr: 'العربية',
+    langFr: 'الفرنسية',
+    langEn: 'الإنجليزية',
+    langUnknown: 'غير معروف',
+
+    roleOwner: 'مالك',
+    roleAdmin: 'مسؤول',
+    roleManager: 'مدير',
+    roleEditor: 'محرر',
+    roleReviewer: 'مراجع',
+    roleViewer: 'مشاهد',
+    roleAuditor: 'مدقق',
   },
 
   fr: {
@@ -411,6 +593,64 @@ const translations: Record<Locale, TranslationKeys> = {
     processingStarted: 'Traitement démarré',
     documentArchived: 'Document archivé',
     documentDeleted: 'Document déplacé vers la corbeille',
+
+    aiAssistant: 'Assistant IA',
+    askAboutDocs: 'Posez des questions sur vos documents en langage naturel.',
+    askSadi: 'Demander à SADI IA',
+
+    statusUploading: 'Téléversement',
+    statusQueued: 'En attente',
+    statusProcessing: 'Traitement',
+    statusExtracting: 'Extraction',
+    statusIndexing: 'Indexation',
+    statusAnalyzing: 'Analyse',
+    statusCompleted: 'Terminé',
+    statusFailed: 'Échoué',
+    statusQuarantined: 'En quarantaine',
+
+    typeContract: 'Contrat',
+    typeInvoice: 'Facture',
+    typeReport: 'Rapport',
+    typeCertificate: 'Certificat',
+    typeLetter: 'Lettre',
+    typeId: "Pièce d'identité",
+    typePolicy: 'Politique',
+    typeLegal: 'Document juridique',
+    typeHr: 'Document RH',
+    typeFinancial: 'Financier',
+    typeTechnical: 'Technique',
+    typeOther: 'Autre',
+
+    classificationPublic: 'Public',
+    classificationInternal: 'Interne',
+    classificationConfidential: 'Confidentiel',
+    classificationHighlyConfidential: 'Très confidentiel',
+
+    archiveActive: 'Actif',
+    archiveInactive: 'Inactif',
+    archiveArchived: 'Archivé',
+    archiveOnHold: 'En attente',
+    archivePendingDisposal: 'En attente de destruction',
+    archiveDisposed: 'Détruit',
+
+    approvalDraft: 'Brouillon',
+    approvalPendingReview: 'En cours de révision',
+    approvalApproved: 'Approuvé',
+    approvalRejected: 'Rejeté',
+    approvalArchived: 'Archivé',
+
+    langAr: 'Arabe',
+    langFr: 'Français',
+    langEn: 'Anglais',
+    langUnknown: 'Inconnu',
+
+    roleOwner: 'Propriétaire',
+    roleAdmin: 'Administrateur',
+    roleManager: 'Gestionnaire',
+    roleEditor: 'Éditeur',
+    roleReviewer: 'Réviseur',
+    roleViewer: 'Lecteur',
+    roleAuditor: 'Auditeur',
   },
 };
 

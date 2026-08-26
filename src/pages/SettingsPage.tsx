@@ -17,9 +17,10 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { useStore } from '@/store/StoreContext';
 import { useAuth } from '@/lib/auth';
 import { plans } from '@/lib/billing';
-import { setLocale, getLocale, type Locale } from '@/lib/i18n';
+import { type Locale } from '@/lib/i18n';
 import { useTranslation } from '@/lib/i18n';
 import { percentage, cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { api } from '@/lib/api';
 import { useToast } from '@/lib/toast';
 import type { PlanTier } from '@/types';
@@ -27,13 +28,12 @@ import type { PlanTier } from '@/types';
 type SettingsTab = 'organization' | 'billing' | 'notifications' | 'security' | 'language';
 
 export function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const { usage, departments } = useStore();
   const { user, organization, refreshOrganization } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<SettingsTab>('organization');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
-  const [currentLang, setCurrentLang] = useState<Locale>(getLocale());
 
   const [orgName, setOrgName] = useState(organization?.name || '');
   const [orgIndustry, setOrgIndustry] = useState(organization?.industry || '');
@@ -57,6 +57,7 @@ export function SettingsPage() {
 
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [generatedApiKey, setGeneratedApiKey] = useState('');
+  const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
 
   const tabs: { key: SettingsTab; label: string; icon: typeof SettingsIcon }[] = [
     { key: 'organization', label: t('organization'), icon: Building2 },
@@ -197,17 +198,22 @@ export function SettingsPage() {
   };
 
   const handleRequestDeletion = async () => {
-    if (!window.confirm(`${t('delete')} ${t('organization')}?`)) return;
-    try {
-      await api.patch(`/api/data/users/${user?.id}`, { isActive: false });
-      toast('success', t('success'));
-      setTimeout(() => {
-        localStorage.removeItem('sadi_token');
-        window.location.href = '/';
-      }, 2000);
-    } catch {
-      toast('error', t('error'));
-    }
+    setConfirm({
+      open: true,
+      message: `${t('delete')} ${t('organization')}?`,
+      onConfirm: async () => {
+        try {
+          await api.patch(`/api/data/users/${user?.id}`, { isActive: false });
+          toast('success', t('success'));
+          setTimeout(() => {
+            localStorage.removeItem('sadi_token');
+            window.location.href = '/';
+          }, 2000);
+        } catch {
+          toast('error', t('error'));
+        }
+      },
+    });
   };
 
   const handleDownloadInvoice = (inv: { id: string; date: string; amount: string; status: string }) => {
@@ -246,6 +252,7 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">{t('settings')}</h1>
         <p className="mt-1 text-sm text-neutral-500">{t('organization')} {t('billing')} {t('security')} {t('language')}.</p>
@@ -539,14 +546,14 @@ export function SettingsPage() {
                     ]).map((lang) => (
                       <button
                         key={lang.code}
-                        onClick={() => { setCurrentLang(lang.code); setLocale(lang.code); }}
+                        onClick={() => setLocale(lang.code)}
                         className={cn(
                           'flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors',
-                          currentLang === lang.code ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'
+                          locale === lang.code ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-300'
                         )}
                       >
                         {lang.label}
-                        {currentLang === lang.code && <Check className="h-3.5 w-3.5" />}
+                        {locale === lang.code && <Check className="h-3.5 w-3.5" />}
                       </button>
                     ))}
                   </div>
@@ -601,7 +608,7 @@ export function SettingsPage() {
                   <div>
                     <p className="text-sm font-bold text-neutral-900">{plan.name}</p>
                     <p className="text-xs text-neutral-500 mt-1">
-                      {plan.tier === 'enterprise' ? t('currentPlan') : `$${billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice}/mo`}
+                      {plan.tier === 'enterprise' ? t('currentPlan') : `${new Intl.NumberFormat('fr-DZ').format(billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice)} DZD/mois HT`}
                     </p>
                   </div>
                   <Button

@@ -23,6 +23,7 @@ import { useToast } from '@/lib/toast';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
 import { archiveConfig, formatDate, cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Document } from '@/types';
 
 interface CompliancePageProps {
@@ -50,6 +51,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const [editing, setEditing] = useState<RetentionPolicy | null>(null);
   const [form, setForm] = useState({ name: '', documentType: 'other', retentionYears: 7, jurisdiction: '', sector: '' });
   const [holdPickerFor, setHoldPickerFor] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
 
   const loadRetentionPolicies = useCallback(async () => {
     try {
@@ -78,12 +80,17 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   };
 
   const deletePolicy = async (id: string) => {
-    if (!window.confirm(`${t('delete')} ${t('retentionPolicies')}?`)) return;
-    try {
-      await api.delete(`/api/data/retention-policies/${id}`);
-      setRetentionPolicies((p) => p.filter((x) => x.id !== id));
-      toast('success', t('documentDeleted'));
-    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : t('error')); }
+    setConfirm({
+      open: true,
+      message: `${t('delete')} ${t('retentionPolicies')}?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/api/data/retention-policies/${id}`);
+          setRetentionPolicies((p) => p.filter((x) => x.id !== id));
+          toast('success', t('documentDeleted'));
+        } catch (e: unknown) { toast('error', e instanceof Error ? e.message : t('error')); }
+      },
+    });
   };
 
   const autoApply = async () => {
@@ -136,6 +143,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">{t('compliance')}</h1>
         <p className="mt-1 text-sm text-neutral-500">{t('recordsManagement')} {t('retentionPolicies')} {t('legalHolds')} {t('compliance')}.</p>

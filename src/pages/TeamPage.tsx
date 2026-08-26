@@ -16,6 +16,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Modal } from '@/components/ui/Modal';
 import { useStore } from '@/store/StoreContext';
 import { roleConfig, cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
@@ -61,6 +62,7 @@ export function TeamPage() {
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
   const [customRoleUserId, setCustomRoleUserId] = useState<string | null>(null);
   const [customRoleSelection, setCustomRoleSelection] = useState<RoleKey>('viewer');
+  const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
 
   const inviteRoles: RoleKey[] = ['admin', 'manager', 'editor', 'reviewer', 'viewer', 'auditor'];
 
@@ -88,14 +90,19 @@ export function TeamPage() {
   };
 
   const handleRemoveUser = async (userId: string) => {
-    if (!window.confirm(`${t('delete')} ${t('team')}?`)) return;
-    try {
-      await api.patch(`/api/data/users/${userId}`, { isActive: false });
-      await refreshData();
-      toast('success', t('documentDeleted'));
-    } catch (e: any) {
-      toast('error', e.message || t('error'));
-    }
+    setConfirm({
+      open: true,
+      message: `${t('delete')} ${t('team')}?`,
+      onConfirm: async () => {
+        try {
+          await api.patch(`/api/data/users/${userId}`, { isActive: false });
+          await refreshData();
+          toast('success', t('documentDeleted'));
+        } catch (e: unknown) {
+          toast('error', e instanceof Error ? e.message : t('error'));
+        }
+      },
+    });
   };
 
   const handleCustomRoleSubmit = async () => {
@@ -118,6 +125,7 @@ export function TeamPage() {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">{t('team')}</h1>

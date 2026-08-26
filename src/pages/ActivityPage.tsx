@@ -4,6 +4,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { api } from '@/lib/api';
 import { timeAgo } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
 
 interface AuditEntry {
   id: string;
@@ -15,6 +16,7 @@ interface AuditEntry {
 }
 
 export function ActivityPage() {
+  const { t } = useTranslation();
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,17 +34,17 @@ export function ActivityPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Activity & Audit Log</h1>
-        <p className="mt-1 text-sm text-neutral-500">Immutable trail of every action across your workspace.</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('activity')} & {t('auditLogs')}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t('auditLogs')} — {t('activity')}</p>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Audit Trail</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t('auditLogs')}</CardTitle></CardHeader>
         <CardBody className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-sm text-neutral-400">Loading...</div>
+            <div className="p-8 text-center text-sm text-neutral-400">{t('loading')}</div>
           ) : entries.length === 0 ? (
-            <EmptyState icon={<Activity className="h-8 w-8" />} title="No activity yet" description="Actions like uploads, approvals, and policy changes will appear here." />
+            <EmptyState icon={<Activity className="h-8 w-8" />} title={t('activity')} description={t('activity')} />
           ) : (
             <div className="divide-y divide-neutral-50">
               {entries.map((e) => (

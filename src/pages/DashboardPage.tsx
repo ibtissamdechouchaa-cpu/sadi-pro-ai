@@ -29,6 +29,8 @@ import { useTranslation } from '@/lib/i18n';
 import {
   statusConfig,
   typeConfig,
+  getStatusLabel,
+  getTypeLabel,
   timeAgo,
   percentage,
   formatBytes,
@@ -169,7 +171,7 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-neutral-900 truncate">{doc.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-neutral-400">{typeConfig[doc.type].label}</span>
+                        <span className="text-xs text-neutral-400">{getTypeLabel(doc.type, t)}</span>
                         <span className="text-xs text-neutral-300">·</span>
                         <span className="text-xs text-neutral-400">{formatBytes(doc.fileSize)}</span>
                         <span className="text-xs text-neutral-300">·</span>
@@ -178,7 +180,7 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
                     </div>
                     <Badge variant="neutral" className={statusConfig[doc.status].color}>
                       <span className={`h-1.5 w-1.5 rounded-full ${statusConfig[doc.status].dot}`} />
-                      {statusConfig[doc.status].label}
+                      {getStatusLabel(doc.status, t)}
                     </Badge>
                   </button>
                 ))}

@@ -20,6 +20,7 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 import { useTranslation } from '@/lib/i18n';
 import { generateId } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { Document } from '@/types';
 
 interface CollectionsPageProps {
@@ -46,6 +47,7 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
   const [editingName, setEditingName] = useState('');
   const [filterCollectionId, setFilterCollectionId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
 
   const loadCollections = useCallback(async () => {
     if (!user?.organizationId) return;
@@ -125,16 +127,21 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
   };
 
   const deleteCollection = async (id: string) => {
-    if (!window.confirm(`${t('delete')} ${t('collections')}?`)) return;
-    try {
-      await api.delete(`/api/data/collections/${id}`);
-      setCollections((prev) => prev.filter((c) => c.id !== id));
-      setActiveDropdown(null);
-      if (filterCollectionId === id) setFilterCollectionId(null);
-      toast('success', t('documentDeleted'));
-    } catch (e: any) {
-      toast('error', e.message || t('error'));
-    }
+    setConfirm({
+      open: true,
+      message: `${t('delete')} ${t('collections')}?`,
+      onConfirm: async () => {
+        try {
+          await api.delete(`/api/data/collections/${id}`);
+          setCollections((prev) => prev.filter((c) => c.id !== id));
+          setActiveDropdown(null);
+          if (filterCollectionId === id) setFilterCollectionId(null);
+          toast('success', t('documentDeleted'));
+        } catch (e: unknown) {
+          toast('error', e instanceof Error ? e.message : t('error'));
+        }
+      },
+    });
   };
 
   const startEditing = (col: Collection) => {
@@ -158,6 +165,7 @@ export function CollectionsPage({ onOpenDocument }: CollectionsPageProps) {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">{t('collections')}</h1>

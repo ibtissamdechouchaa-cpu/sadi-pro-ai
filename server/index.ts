@@ -19,6 +19,18 @@ import { rateLimit, trackSession } from "./lib/rateLimit.js";
 
 const app = new Hono();
 
+// Security headers without new deps
+app.use("*", async (c, next) => {
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (process.env.NODE_ENV === "production") {
+    c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  await next();
+});
+
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 
 app.use("*", cors({
@@ -28,8 +40,11 @@ app.use("*", cors({
 }));
 
 app.use("*", async (c, next) => {
-  // health should never be rate-limited
-  if (c.req.path.includes("/health")) return next();
+  // health should never be rate-limited — exact match only to avoid bypassing rate limits on other paths
+  if (c.req.path === "/api/health") {
+    c.header("Cache-Control", "no-store");
+    return next();
+  }
   return rateLimit({ windowMs: 60000, max: 400 })(c, next);
 });
 
@@ -44,6 +59,7 @@ app.onError((err, c) => {
 });
 
 app.get("/api/health", async (c) => {
+  c.header("Cache-Control", "no-store");
   try {
     const { prisma } = await import("./lib/prisma.js");
     await prisma.$queryRaw`SELECT 1`;

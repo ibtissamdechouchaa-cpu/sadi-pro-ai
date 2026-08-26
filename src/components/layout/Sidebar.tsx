@@ -118,16 +118,16 @@ export function Sidebar({ current, onNavigate, collapsed, onHome }: SidebarProps
           <div className="rounded-xl bg-gradient-to-br from-primary-50 to-accent-50 p-3.5">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="h-4 w-4 text-primary-600" />
-              <span className="text-xs font-semibold text-neutral-900">AI Assistant</span>
+              <span className="text-xs font-semibold text-neutral-900">{t('aiAssistant')}</span>
             </div>
             <p className="text-[11px] text-neutral-600 leading-relaxed mb-3">
-              Ask questions about your documents in natural language.
+              {t('askAboutDocs')}
             </p>
             <button
               onClick={() => onNavigate('search')}
               className="w-full rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-100 transition-colors focus-ring border border-primary-200"
             >
-              Ask SADI AI
+              {t('askSadi')}
             </button>
           </div>
         </div>
