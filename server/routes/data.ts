@@ -601,8 +601,8 @@ data.post("/documents", async (c) => {
   const createdDocs: { id: string; title: string; organizationId: string; filePath?: string | null; fileType?: string | null }[] = [];
   if (body.documents?.length) {
     for (const doc of body.documents) {
-      // Strip filePath from client — must be set server-side via /upload, not client
-      const { filePath: _fp, organizationId: _org, ...rest } = doc as Record<string, unknown>;
+      const { organizationId: _org, ...rest } = doc as Record<string, unknown>;
+      const clientFilePath = (rest as { filePath?: string }).filePath || null;
       const created = await prisma.document.create({
         data: {
           id: (rest as { id?: string }).id,
@@ -613,7 +613,7 @@ data.post("/documents", async (c) => {
           status: (rest as { status?: string }).status || "uploading",
           fileSize: (rest as { fileSize?: number | bigint }).fileSize || 0,
           fileType: (rest as { fileType?: string }).fileType,
-          filePath: null,
+          filePath: clientFilePath,
           uploadedBy: (rest as { uploadedBy?: string }).uploadedBy,
           hash: (rest as { hash?: string }).hash,
           tags: (rest as { tags?: string[] }).tags || [],
