@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+import pdfParse from "pdf-parse";
 import { downloadFromR2 } from "./r2.js";
 
 const IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "tif"]);
@@ -106,7 +107,16 @@ export async function extractFileText(
     if (t) return { text: t, isImage: false };
   }
 
-  // PDF / PPTX / other Office via @doc-preview/core
+  // PDF via pdf-parse (most reliable)
+  if (ext === "pdf") {
+    try {
+      const result = await pdfParse(buffer);
+      const text = result.text?.trim();
+      if (text && text.length > 20) return { text: text.slice(0, 15000), isImage: false };
+    } catch {}
+  }
+
+  // PPTX / other Office via @doc-preview/core
   try {
     const { extractComparableText } = await import("@doc-preview/core");
     const doc = { file: new Blob([buffer as unknown as BlobPart]), fileName: `${title}.${ext}`, fileType: ext };

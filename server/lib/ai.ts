@@ -74,32 +74,58 @@ function fallbackInsight(title: string, text: string): DocumentInsight {
   const dates = [...new Set([...(text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/g) || []), ...(text.match(/\b20\d{2}\b/g) || [])])].slice(0, 5);
   const contract = text.match(/contrat\s*n°?\s*([\w\/\-]+)/i)?.[1] || undefined;
   const docNum = text.match(/document\s*n°?\s*([\w\/\-]+)/i)?.[1] || undefined;
+
+  // Detect language
+  const arCount = (text.match(/[\u0600-\u06FF]/g) || []).length;
+  const frCount = (text.match(/\b(de|le|la|les|des|un|une|et|est|pour|dans|avec|sur|pas|que|qui|ce|ne|se|au|en)\b/g) || []).length;
+  const enCount = (text.match(/\b(the|is|are|and|for|that|this|with|from|have|has|was|were|been|will|would|can|could|not|but|all|any|each|every)\b/gi) || []).length;
+  const lang = arCount > frCount && arCount > enCount ? "ar" : frCount > enCount ? "fr" : "en";
+
+  // Extract keywords
+  const wordsArr = text.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+  const freq: Record<string, number> = {};
+  wordsArr.forEach((w: string) => { freq[w] = (freq[w] || 0) + 1; });
+  const keywords = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([w]) => w);
+
+  // Detect entities
+  const persons = [...text.matchAll(/\b([A-Z][a-z]+ (?:[A-Z][a-z]+ ){0,2}[A-Z][a-z]+)\b/g)].map((m) => m[1]).slice(0, 5);
+
+  // Detect document type from content
+  let docType = "other";
+  if (/contrat|contract|اتفاقية/i.test(text)) docType = "contract";
+  else if (/facture|invoice|فاتورة/i.test(text)) docType = "invoice";
+  else if (/rapport|report|تقرير/i.test(text)) docType = "report";
+  else if (/certificat|certificate|شهادة/i.test(text)) docType = "certificate";
+  else if (/cv|resume|سيرة ذاتية|البريد/i.test(text) || /skills|education|experience/i.test(text)) docType = "other";
+
   return {
-    summary: `Document "${title}" — ~${words} words.`,
-    keyEntities: [],
+    summary: `Document "${title}" — ~${words} words. ${lang === "ar" ? 'Arabic' : lang === 'fr' ? 'French' : 'English'} content with ${dates.length} date references and ${keywords.length} detected keywords.`,
+    keyEntities: persons.length > 0 ? persons : keywords.slice(0, 3),
     importantDates: dates,
     risks: [],
-    missingInfo: [],
-    suggestedTags: [],
+    missingInfo: words < 50 ? ["Document content appears very short"] : [],
+    suggestedTags: keywords.slice(0, 5),
     sentiment: "neutral",
-    confidence: 0.3,
-    documentType: "other",
+    confidence: 0.4,
+    documentType: docType,
     documentNumber: docNum,
     contractNumber: contract,
     issuingAuthority: undefined,
-    institution: undefined,
-    persons: [],
+    institution: persons[0] || undefined,
+    persons,
     legalValue: "medium",
     historicalValue: "low",
     retentionYearsSuggested: 5,
     confidentialitySuggested: "internal",
-    languageDetected: "unknown",
-    keywords: [],
+    languageDetected: lang,
+    keywords,
     reasoning: [
-      { step: 1, title: "Document scan", thought: `Counted ~${words} words; detected ${dates.length} date references.` },
-      { step: 2, title: "Content assessment", thought: "No AI provider available — used heuristic fallback with regex for contract/doc numbers." },
+      { step: 1, title: "Content scan", thought: `Counted ~${words} words; detected ${lang.toUpperCase()} language; found ${dates.length} dates, ${keywords.length} keywords, ${persons.length} person names.` },
+      { step: 2, title: "Type detection", thought: `Document type detected as "${docType}" from content patterns.` },
+      { step: 3, title: "Metadata extraction", thought: `Extracted ${keywords.slice(0, 5).join(", ")} as key terms.` },
+      { step: 4, title: "Assessment", thought: words < 50 ? "Very short content — may be placeholder or minimal document." : "Sufficient content for heuristic analysis." },
     ],
-    reasoningSummary: "Fallback analysis — add GEMINI_API_KEY or OPENAI_API_KEY for full reasoning.",
+    reasoningSummary: `Heuristic analysis — detected ${lang.toUpperCase()} ${docType} with ${words} words. Add GEMINI_API_KEY for full AI analysis.`,
   };
 }
 
@@ -263,11 +289,32 @@ export async function generateSearchAnswer(query: string, documentSnippets: stri
   const oai = await openaiAnswer(query, documentSnippets);
   if (oai) return oai;
 
+  // Smart fallback: extract answer from content without AI API
+  const ctx = documentSnippets.join("\n").slice(0, 8000);
+  const queryWords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+  const sentences = ctx.split(/[.!?\n]+/).filter((s: string) => s.trim().length > 10);
+
+  // Score sentences by keyword overlap
+  const scored = sentences.map((s: string) => {
+    const lower = s.toLowerCase();
+    const score = queryWords.reduce((acc: number, w: string) => acc + (lower.includes(w) ? 1 : 0), 0);
+    return { text: s.trim(), score };
+  }).filter((s: { text: string; score: number }) => s.score > 0)
+    .sort((a: { text: string; score: number }, b: { text: string; score: number }) => b.score - a.score);
+
+  const bestAnswer = scored.length > 0
+    ? scored.slice(0, 3).map((s: { text: string; score: number }) => s.text).join(". ")
+    : ctx.slice(0, 500);
+
   return {
-    answer: documentSnippets[0]
-      ? `Based on the search results: ${documentSnippets[0].slice(0, 200)}...`
-      : "No relevant documents found.",
-    reasoning: [{ step: 1, title: "Fallback", thought: "No AI provider available — returned raw snippet." }],
-    reasoningSummary: "Fallback response.",
+    answer: bestAnswer || "لم يتم العثور على معلومات كافية في الوثيقة.",
+    reasoning: [{
+      step: 1,
+      title: "Content search",
+      thought: `Searched ${sentences.length} sentences for keywords: ${queryWords.join(", ")}. Found ${scored.length} matches.`
+    }],
+    reasoningSummary: scored.length > 0
+      ? `Found ${scored.length} relevant passages by keyword matching.`
+      : "No provider available — used keyword-based fallback.",
   };
 }
