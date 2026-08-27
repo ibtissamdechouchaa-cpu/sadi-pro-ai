@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   FileText,
@@ -47,6 +47,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DocumentPreview } from '@/components/DocumentPreview';
 import { ReasoningTrace } from '@/components/ReasoningTrace';
 import { DocumentAskAI } from '@/components/DocumentAskAI';
+import { WorkflowStepper } from '@/components/WorkflowStepper';
 import type { Document } from '@/types';
 
 interface DocumentDetailPageProps {
@@ -74,6 +75,13 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   const [translating, setTranslating] = useState(false);
   const [translationLang, setTranslationLang] = useState<'ar' | 'fr' | 'en'>('fr');
 
+  useEffect(() => {
+    if (tab === 'signatures') {
+      setLoadingSignatures(true);
+      api.get(`/api/data/documents/${doc.id}/signatures`).then((d: unknown) => setSignatures((d as { signatures: unknown[] }).signatures as never[])).catch(() => {}).finally(() => setLoadingSignatures(false));
+    }
+  }, [tab, doc.id]);
+
   const department = departments.find((d) => d.id === doc.departmentId);
   const relatedDocs = documents.filter((d) => doc.relatedDocIds.includes(d.id));
   // sharedWith stores emails, not IDs — match by email or ID
@@ -86,9 +94,9 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
     { key: 'versions', label: t('versions'), icon: History },
     { key: 'activity', label: t('activity'), icon: Activity },
     { key: 'permissions', label: t('permissions'), icon: Lock },
-    { key: 'retention', label: 'Rétention', icon: Clock },
-    { key: 'signatures', label: 'Signatures', icon: CheckCircle2 },
-    { key: 'translate', label: 'Traduction', icon: FileText },
+    { key: 'retention', label: t('retentionManagement'), icon: Clock },
+    { key: 'signatures', label: t('signatures'), icon: CheckCircle2 },
+    { key: 'translate', label: t('translate'), icon: FileText },
   ];
 
   const handleShare = async () => {
@@ -237,7 +245,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Gestion de la Rétention</CardTitle>
+                <CardTitle>{t('retentionManagement')}</CardTitle>
               </CardHeader>
               <CardBody className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -270,14 +278,40 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                 </div>
 
                 {retentionSuggestion && (
-                  <div className="rounded-lg border border-primary-200 bg-primary-50/30 p-4">
+                  <div className="rounded-lg border border-primary-200 bg-primary-50/30 p-4 space-y-3">
                     <p className="text-sm font-medium text-primary-900">Suggestion IA</p>
                     <p className="text-sm text-primary-700 mt-1">{retentionSuggestion.reason}</p>
-                    <p className="text-xs text-primary-600 mt-2">
-                      Rétention suggérée: {retentionSuggestion.retentionYears} ans | Confiance: {Math.round((retentionSuggestion.confidence || 0) * 100)}%
-                    </p>
+                    <p className="text-xs text-primary-600">Rétention suggérée: {retentionSuggestion.retentionYears} ans | Confiance: {Math.round((retentionSuggestion.confidence || 0) * 100)}% | Règle: {retentionSuggestion.applicableRule || '—'} | Action: {retentionSuggestion.action || '—'}</p>
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Button size="sm" onClick={async () => {
+                        try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: retentionSuggestion.retentionYears, reason: `Accepted AI suggestion: ${retentionSuggestion.reason}` }); toast('success','Retention accepted'); await refreshData(); } catch { toast('error', t('error')); }
+                      }}>Accept</Button>
+                      <Button variant="outline" size="sm" onClick={async () => {
+                        const v = prompt('Modify retention years:', String(retentionSuggestion.retentionYears));
+                        if (!v) return;
+                        try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: Number(v), reason: 'Modified by user' }); toast('success','Modified'); await refreshData(); } catch { toast('error', t('error')); }
+                      }}>Modify</Button>
+                      <Button variant="ghost" size="sm" onClick={async () => {
+                        try { await api.post('/api/data/compliance-check/' + doc.id, {}); toast('success','Rejected — logged'); await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: doc.retentionYears || 5, reason: 'Rejected AI, kept current' }); } catch { toast('error', t('error')); }
+                      }}>Reject</Button>
+                      <Button variant="ghost" size="sm" onClick={async () => {
+                        try { const r = await api.post(`/api/data/compliance-check/${doc.id}`) as { traceability: Array<{ referenceNumber: string; title: string }> }; toast('success', `Trace: ${r.traceability?.[0]?.referenceNumber || 'no ref'}`); } catch { toast('error', t('error')); }
+                      }}>View Traceability</Button>
+                    </div>
                   </div>
                 )}
+                <div className="rounded-lg border border-neutral-200 p-4">
+                  <p className="text-xs font-medium text-neutral-700 mb-2">Manual retention update</p>
+                  <div className="flex items-center gap-2">
+                    <input id="manualRet" type="number" placeholder="Years" className="h-9 w-24 rounded-lg border border-neutral-200 px-3 text-sm" defaultValue={doc.retentionYears ?? ''} />
+                    <Button size="sm" variant="outline" onClick={async () => {
+                      const el = document.getElementById('manualRet') as HTMLInputElement;
+                      const v = Number(el.value);
+                      if (!v) return;
+                      try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: v, reason: 'Manual update' }); toast('success','Updated'); await refreshData(); } catch { toast('error', t('error')); }
+                    }}>Apply</Button>
+                  </div>
+                </div>
               </CardBody>
             </Card>
           </div>
@@ -286,15 +320,47 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
         {tab === 'signatures' && (
           <div className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Signatures Électroniques</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>{t('electronicSignature')}</CardTitle>
+                <Button variant="outline" size="sm" onClick={async () => {
+                  setLoadingSignatures(true);
+                  try { const d = await api.get(`/api/data/documents/${doc.id}/signatures`) as { signatures: any[] }; setSignatures(d.signatures); } catch {} setLoadingSignatures(false);
+                }}>{loadingSignatures ? '...' : 'Refresh'}</Button>
               </CardHeader>
-              <CardBody>
-                <div className="text-center py-8">
-                  <CheckCircle2 className="h-12 w-12 text-neutral-300 mx-auto" />
-                  <p className="text-sm text-neutral-500 mt-3">Gestion des signatures électroniques</p>
-                  <p className="text-xs text-neutral-400 mt-1">Workflow de signature avec traçabilité complète</p>
+              <CardBody className="space-y-3">
+                <div className="flex gap-2">
+                  <input id="sigEmail" placeholder="signer@email.com" className="flex-1 h-9 rounded-lg border border-neutral-200 px-3 text-sm" />
+                  <input id="sigName" placeholder="Name" className="w-32 h-9 rounded-lg border border-neutral-200 px-3 text-sm" />
+                  <Button size="sm" onClick={async ()=>{
+                    const email = (document.getElementById('sigEmail') as HTMLInputElement).value.trim();
+                    const name = (document.getElementById('sigName') as HTMLInputElement).value.trim() || email;
+                    if(!email) return;
+                    try { await api.post(`/api/data/documents/${doc.id}/signatures`, { signers: [{ email, name, order: signatures.length + 1 }] }); toast('success','Signer added'); const d = await api.get(`/api/data/documents/${doc.id}/signatures`) as { signatures: any[] }; setSignatures(d.signatures); } catch{ toast('error', t('error'))}
+                  }}>Add Signer</Button>
                 </div>
+                {signatures.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="h-12 w-12 text-neutral-300 mx-auto" />
+                    <p className="text-sm text-neutral-500 mt-3">No signatures — add signers to start workflow</p>
+                    <p className="text-xs text-neutral-400 mt-1">NOT_REQUIRED → PENDING → IN_PROGRESS → SIGNED/REJECTED/EXPIRED · Traçabilité: Signer/Date/Version</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-100">
+                    {signatures.map((s: { id: string; signerName: string; signerEmail: string; order: number; status: string; signedAt?: string; documentVersion: number }) => (
+                      <div key={s.id} className="flex items-center justify-between py-3">
+                        <div>
+                          <p className="text-sm font-medium text-neutral-900">{s.signerName} <span className="text-xs text-neutral-500">#{s.order} · v{s.documentVersion}</span></p>
+                          <p className="text-xs text-neutral-500">{s.signerEmail} · {s.status}{s.signedAt ? ` · ${formatDate(s.signedAt)}` : ''}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          {s.status === 'pending' && <><Button size="sm" variant="outline" onClick={async ()=>{ await api.patch(`/api/data/signatures/${s.id}/sign`, { action: 'sign' }); const d = await api.get(`/api/data/documents/${doc.id}/signatures`) as { signatures: any[] }; setSignatures(d.signatures); toast('success','Signed') }}>Sign</Button><Button size="sm" variant="ghost" onClick={async ()=>{ await api.patch(`/api/data/signatures/${s.id}/sign`, { action: 'reject' }); const d = await api.get(`/api/data/documents/${doc.id}/signatures`) as { signatures: any[] }; setSignatures(d.signatures); }}>Reject</Button></>}
+                          {s.status !== 'pending' && <Badge variant={s.status==='signed'?'success': s.status==='rejected'?'error':'neutral'}>{s.status}</Badge>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-neutral-400">Document signatureState: { (doc as { signatureState?: string }).signatureState || 'not_required' } · v{doc.version} locked after SIGNED · new edit creates new version</p>
               </CardBody>
             </Card>
           </div>
@@ -304,7 +370,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Traduction IA</CardTitle>
+                <CardTitle>{t('translate')} IA</CardTitle>
               </CardHeader>
               <CardBody className="space-y-4">
                 <div className="flex items-center gap-2">
@@ -461,6 +527,19 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
         {/* Tab content */}
         {tab === 'overview' && (
           <div className="space-y-4">
+            <Card>
+              <CardHeader><CardTitle>Workflow</CardTitle></CardHeader>
+              <CardBody>
+                <WorkflowStepper approvalState={doc.approvalState} archiveState={doc.archiveState} status={doc.status} />
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {doc.approvalState === 'draft' && <Button size="sm" onClick={async()=>{ await api.patch(`/api/data/documents/${doc.id}/status`, {status:'pending_review'}); toast('success','Sent for review'); await refreshData(); }}>Send for Review</Button>}
+                  {doc.approvalState === 'pending_review' && <><Button size="sm" variant="outline" onClick={async()=>{ await api.patch(`/api/data/documents/${doc.id}/status`, {status:'approved'}); toast('success','Approved'); await refreshData(); }}>Approve</Button><Button size="sm" variant="ghost" onClick={async()=>{ await api.patch(`/api/data/documents/${doc.id}/status`, {status:'rejected'}); toast('error','Rejected'); await refreshData(); }}>Reject</Button></>}
+                  {doc.approvalState === 'approved' && <Button size="sm" onClick={async()=>{ await api.post(`/api/data/documents/${doc.id}/signatures`, {signers:[{email:doc.uploadedBy || 'signer@example.com', name:'Signer', order:1}]}); toast('success','Sent for signature'); await refreshData(); }}>Send for Signature</Button>}
+                  {(doc.approvalState === 'approved' || doc.approvalState === 'signed') && doc.archiveState !== 'permanent_archive' && <Button size="sm" variant="outline" onClick={async()=>{ await api.patch(`/api/data/documents/${doc.id}/permanent-archive`, {}); toast('success','Moved to Permanent Archive'); await refreshData(); }}>To Permanent Archive</Button>}
+                  {doc.archiveState === 'active' && <Button size="sm" variant="outline" onClick={async()=>{ await api.post('/api/data/disposal-requests', {documentId:doc.id, reason:'Retention expired'}); toast('success','Disposal requested'); await refreshData(); }}>Request Disposal</Button>}
+                </div>
+              </CardBody>
+            </Card>
             <Card>
               <CardHeader><CardTitle>{t('metadata')}</CardTitle></CardHeader>
               <CardBody className="grid grid-cols-2 gap-4">

@@ -20,6 +20,7 @@ const CollectionsPage = lazy(() => import('@/pages/CollectionsPage').then(m => (
 const CompliancePage = lazy(() => import('@/pages/CompliancePage').then(m => ({ default: m.CompliancePage })));
 const TeamPage = lazy(() => import('@/pages/TeamPage').then(m => ({ default: m.TeamPage })));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+const ReportsPage = lazy(() => import('@/pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const TrashPage = lazy(() => import('@/pages/TrashPage').then(m => ({ default: m.TrashPage })));
@@ -103,6 +104,8 @@ function AppRoutes() {
         return <TeamPage />;
       case 'analytics':
         return <AnalyticsPage onNavigate={handleNavigate} />;
+      case 'reports':
+        return <ReportsPage />;
       case 'notifications':
         return <NotificationsPage />;
       case 'activity':

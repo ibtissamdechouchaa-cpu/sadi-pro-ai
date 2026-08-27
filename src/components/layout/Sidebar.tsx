@@ -29,6 +29,7 @@ export type PageKey =
   | 'compliance'
   | 'team'
   | 'analytics'
+  | 'reports'
   | 'notifications'
   | 'activity'
   | 'trash'
@@ -53,6 +54,7 @@ const navItemsConfig: { key: PageKey; labelKey: string; fallback: string; icon: 
   { key: 'compliance', labelKey: 'compliance', fallback: 'Compliance', icon: Shield },
   { key: 'team', labelKey: 'team', fallback: 'Team & Roles', icon: Users },
   { key: 'analytics', labelKey: 'analytics', fallback: 'Analytics', icon: BarChart3 },
+  { key: 'reports', labelKey: 'reports', fallback: 'Reports', icon: FileText },
   { key: 'notifications', labelKey: 'notifications', fallback: 'Notifications', icon: Bell },
   { key: 'activity', labelKey: 'activity', fallback: 'Activity Log', icon: Activity },
   { key: 'trash', labelKey: 'trash', fallback: 'Trash', icon: Trash2 },

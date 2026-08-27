@@ -36,6 +36,20 @@ export interface DocumentInsight {
   confidence: number;
   reasoning?: ReasoningStep[];
   reasoningSummary?: string;
+  // Extended per spec §2 — extracted metadata with confidence
+  documentType?: string;
+  documentNumber?: string;
+  contractNumber?: string;
+  issuingAuthority?: string;
+  institution?: string;
+  persons?: string[];
+  legalValue?: string; // high | medium | low | permanent
+  historicalValue?: string;
+  retentionYearsSuggested?: number;
+  confidentialitySuggested?: string;
+  languageDetected?: string;
+  keywords?: string[];
+  importantDatesDetailed?: { label: string; date: string; confidence: number }[];
 }
 
 export interface ImageInput {
@@ -58,6 +72,8 @@ function parseInsightJson(raw: string): DocumentInsight | null {
 function fallbackInsight(title: string, text: string): DocumentInsight {
   const words = text.split(/\s+/).filter(Boolean).length;
   const dates = [...new Set([...(text.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/g) || []), ...(text.match(/\b20\d{2}\b/g) || [])])].slice(0, 5);
+  const contract = text.match(/contrat\s*n°?\s*([\w\/\-]+)/i)?.[1] || undefined;
+  const docNum = text.match(/document\s*n°?\s*([\w\/\-]+)/i)?.[1] || undefined;
   return {
     summary: `Document "${title}" — ~${words} words.`,
     keyEntities: [],
@@ -67,17 +83,31 @@ function fallbackInsight(title: string, text: string): DocumentInsight {
     suggestedTags: [],
     sentiment: "neutral",
     confidence: 0.3,
+    documentType: "other",
+    documentNumber: docNum,
+    contractNumber: contract,
+    issuingAuthority: undefined,
+    institution: undefined,
+    persons: [],
+    legalValue: "medium",
+    historicalValue: "low",
+    retentionYearsSuggested: 5,
+    confidentialitySuggested: "internal",
+    languageDetected: "unknown",
+    keywords: [],
     reasoning: [
       { step: 1, title: "Document scan", thought: `Counted ~${words} words; detected ${dates.length} date references.` },
-      { step: 2, title: "Content assessment", thought: "No AI provider available — used heuristic fallback." },
+      { step: 2, title: "Content assessment", thought: "No AI provider available — used heuristic fallback with regex for contract/doc numbers." },
     ],
     reasoningSummary: "Fallback analysis — add GEMINI_API_KEY or OPENAI_API_KEY for full reasoning.",
   };
 }
 
-const INSIGHT_PROMPT = `You are a document analysis AI with visible reasoning. Think step-by-step, then return ONLY valid JSON (no markdown, no explanation) with keys:
+const INSIGHT_PROMPT = `You are a document analysis AI for Algerian archive system. Think step-by-step, then return ONLY valid JSON (no markdown) with keys:
 summary (2-3 sentences), keyEntities (string[]), importantDates (string[]), risks (string[]), missingInfo (string[]), suggestedTags (3-5 tags), sentiment ("positive"|"negative"|"neutral"), confidence (0-1),
-reasoning (array of {step:number, title:string, thought:string} — 3 to 5 steps tracing your analysis), reasoningSummary (one sentence summarizing your reasoning).`;
+documentType (one of contract/invoice/report/certificate/letter/id/policy/legal/hr/financial/technical/other), documentNumber (string or null), contractNumber (string or null), issuingAuthority (string or null), institution (string or null), persons (string[]), legalValue ("permanent"|"high"|"medium"|"low"), historicalValue ("high"|"medium"|"low"), retentionYearsSuggested (number 1-50), confidentialitySuggested ("public"|"internal"|"confidential"|"highly_confidential"|"restricted"), languageDetected ("ar"|"fr"|"en"|"unknown"), keywords (string[] 3-5), importantDatesDetailed ([{label,date,confidence}]),
+reasoning (array of {step:number, title:string, thought:string} — 4-5 steps tracing extraction), reasoningSummary (one sentence).
+Extract: عنوان الوثيقة, نوع الوثيقة, تاريخ الوثيقة, الجهة المصدرة, اسم المؤسسة, أسماء الأشخاص, أرقام الوثائق, أرقام العقود, التواريخ المهمة, مدة الحفظ المحتملة, مستوى السرية, الكلمات المفتاحية, القيمة القانونية, القيمة التاريخية, اللغة, ملخص.`;
 
 export interface ReasoningChatResult {
   answer: string;

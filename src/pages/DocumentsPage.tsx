@@ -27,6 +27,7 @@ import { useToast } from '@/lib/toast';
 import { api } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { CreateDocumentModal } from '@/components/CreateDocumentModal';
 import {
   statusConfig,
   typeConfig,
@@ -74,6 +75,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
   const bulkShareRef = useRef<HTMLDivElement>(null);
   const rowDropdownRef = useRef<HTMLDivElement>(null);
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
+  const [showCreate, setShowCreate] = useState(false);
 
   const handleFiles = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -219,6 +221,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
   return (
     <div className="space-y-5">
       <ConfirmDialog open={confirm.open} title={t('confirm')} message={confirm.message} confirmLabel={t('delete')} onConfirm={()=>{confirm.onConfirm(); setConfirm({...confirm,open:false})}} onCancel={()=>setConfirm({...confirm,open:false})} />
+      <CreateDocumentModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setShowCreate(false)} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -240,6 +243,9 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
               <Grid3x3 className="h-4 w-4" />
             </button>
           </div>
+          <Button variant="outline" icon={<FileText className="h-4 w-4" />} onClick={() => setShowCreate(true)}>
+            {t('create') || 'Create'}
+          </Button>
           <Button icon={<Upload className="h-4 w-4" />} onClick={() => fileInputRef.current?.click()}>
             {t('upload')}
           </Button>
@@ -429,6 +435,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate flex items-center gap-1.5">
                             {doc.title}
+                            {doc.language !== 'unknown' && <span className="ml-1 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600">{doc.language.toUpperCase()}</span>}
                             {doc.legalHold && <Shield className="h-3.5 w-3.5 text-error-500 shrink-0" />}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
@@ -477,6 +484,9 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                             >
                               <Share2 className="h-3.5 w-3.5" /> {t('view')}
                             </button>
+                            <button onClick={async () => { try { await api.post(`/api/data/documents/${doc.id}/translate`, { targetLang: 'ar' }); toast('success', t('translateToArabic')); } catch { toast('error', t('error')); } setRowDropdownId(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50">{t('translateToArabic')}</button>
+                            <button onClick={async () => { try { await api.post(`/api/data/documents/${doc.id}/translate`, { targetLang: 'fr' }); toast('success', t('translateToFrench')); } catch { toast('error', t('error')); } setRowDropdownId(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50">{t('translateToFrench')}</button>
+                            <button onClick={async () => { try { await api.post(`/api/data/documents/${doc.id}/translate`, { targetLang: 'en' }); toast('success', t('translateToEnglish')); } catch { toast('error', t('error')); } setRowDropdownId(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50">{t('translateToEnglish')}</button>
                             <button
                               onClick={() => handleRowDelete(doc.id)}
                               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-error-600 hover:bg-error-50"

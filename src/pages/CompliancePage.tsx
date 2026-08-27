@@ -45,7 +45,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const { t } = useTranslation();
   const { documents, updateDocument, departments, refreshData } = useStore();
   const { toast } = useToast();
-  const [tab, setTab] = useState<'records' | 'retention' | 'legal-hold' | 'frameworks'>('records');
+  const [tab, setTab] = useState<'records' | 'retention' | 'legal-hold' | 'frameworks' | 'legal-kb' | 'disposal'>('records');
   const [retentionPolicies, setRetentionPolicies] = useState<RetentionPolicy[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<RetentionPolicy | null>(null);
@@ -54,6 +54,11 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
   const [legalRefs, setLegalRefs] = useState<any[]>([]);
   const [loadingLegalRefs, setLoadingLegalRefs] = useState(false);
+  const [disposals, setDisposals] = useState<any[]>([]);
+  const loadDisposals = useCallback(async () => {
+    try { const d = await api.get('/api/data/disposal-requests') as { requests: any[] }; setDisposals(d.requests || []); } catch {}
+  }, []);
+  useEffect(() => { if (tab === 'disposal') loadDisposals(); }, [tab, loadDisposals]);
 
   const loadRetentionPolicies = useCallback(async () => {
     try {
@@ -153,6 +158,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
     { key: 'legal-hold' as const, label: t('legalHolds'), icon: Shield },
     { key: 'frameworks' as const, label: t('compliance'), icon: Scale },
     { key: 'legal-kb' as const, label: 'Base de données juridique', icon: FileText },
+    { key: 'disposal' as const, label: 'Disposal Queue', icon: Trash2 },
   ];
 
   return (
@@ -419,6 +425,39 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
               )}
             </CardBody>
           </Card>
+        </div>
+      )}
+
+      {tab === 'disposal' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>{t('disposalQueue')} — Pending Disposal → Approval → Final</CardTitle>
+              <Button variant="outline" size="sm" onClick={loadDisposals}>Refresh</Button>
+            </CardHeader>
+            <CardBody className="p-0">
+              {disposals.length === 0 ? <div className="text-center py-12 text-sm text-neutral-500">No disposal requests — documents in PENDING_DISPOSAL will appear here. Deletion is not direct, requires approval and audit.</div> : (
+                <div className="divide-y divide-neutral-100">
+                  {disposals.map((r: { id: string; documentId: string; status: string; reason: string; requestedByName: string; createdAt: string }) => (
+                    <div key={r.id} className="flex items-center justify-between px-5 py-3">
+                      <div>
+                        <p className="text-sm font-medium text-neutral-900">{r.documentId.slice(0,8)}… <span className="text-xs text-neutral-500">{r.reason || '—'}</span></p>
+                        <p className="text-xs text-neutral-400">By {r.requestedByName} · {formatDate(r.createdAt)} · {r.status}</p>
+                      </div>
+                      {r.status === 'pending' && (
+                        <div className="flex gap-1">
+                          <Button size="sm" onClick={async()=>{ await api.patch(`/api/data/disposal-requests/${r.id}/approve`, {action:'approve'}); toast('success','Approved — disposed'); loadDisposals(); }}>Approve</Button>
+                          <Button size="sm" variant="outline" onClick={async()=>{ await api.patch(`/api/data/disposal-requests/${r.id}/approve`, {action:'reject'}); toast('success','Rejected'); loadDisposals(); }}>Reject</Button>
+                        </div>
+                      )}
+                      {r.status !== 'pending' && <Badge variant={r.status==='approved'?'success':'neutral'}>{r.status}</Badge>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+          <Card className="border-warning-200 bg-warning-50/20"><CardBody><p className="text-xs text-warning-800"><strong>Audit:</strong> Every disposal logs: document, requester, reason, date, approver, time, policy, result. After DISPOSED, AuditLog retained even after file deletion.</p></CardBody></Card>
         </div>
       )}
 

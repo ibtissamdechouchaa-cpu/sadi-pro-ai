@@ -85,6 +85,43 @@ if (process.env.NODE_ENV === "production") {
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
 
+// Retention cron: 30/15/7/1/0 day alerts + auto pending_disposal (runs hourly, also on startup)
+async function retentionCron() {
+  try {
+    const { prisma } = await import("./lib/prisma.js");
+    const orgs = await prisma.organization.findMany({ select: { id: true } });
+    const now = new Date();
+    for (const org of orgs) {
+      const docs = await prisma.document.findMany({ where: { organizationId: org.id, deletedAt: null, expiresAt: { not: null }, archiveState: { notIn: ["disposed","permanent_archive"] } } });
+      for (const doc of docs) {
+        const daysLeft = Math.ceil((new Date(doc.expiresAt!).getTime() - now.getTime()) / (1000*60*60*24));
+        if (daysLeft <= 0 && doc.archiveState !== "pending_disposal") {
+          await prisma.document.update({ where: { id: doc.id }, data: { archiveState: "pending_disposal" } });
+          try { await prisma.auditLog.create({ data: { organizationId: org.id, action: "RETENTION_EXPIRED_AUTO", resourceType: "document", resourceId: doc.id, resourceName: doc.title, metadata: { daysLeft, auto: true } } }); } catch {}
+          try {
+            const admins = await prisma.profile.findMany({ where: { organizationId: org.id, role: { in: ["owner","admin","manager"] }, isActive: true }, take: 3 });
+            for (const adm of admins) {
+              await prisma.notification.create({ data: { organizationId: org.id, userId: adm.id, type: "error", title: `Retention expired: ${doc.title}`, message: `انتهت مدة الحفظ المحددة للوثيقة "${doc.title}". يجب مراجعتها واتخاذ قرار الإقصاء وفق القواعد.` } });
+            }
+          } catch {}
+        } else if ([30,15,7,1].includes(daysLeft)) {
+          try {
+            const exists = await prisma.notification.findFirst({ where: { organizationId: org.id, title: { contains: doc.id.slice(0,8) } } });
+            if (!exists) {
+              const admins = await prisma.profile.findMany({ where: { organizationId: org.id, isActive: true }, take: 2 });
+              for (const adm of admins) {
+                await prisma.notification.create({ data: { organizationId: org.id, userId: adm.id, type: daysLeft<=1?"error":daysLeft<=7?"warning":"info", title: `Document expiring in ${daysLeft}d: ${doc.title}`, message: `الوثيقة "${doc.title}" ستنتهي مدة حفظها بتاريخ ${new Date(doc.expiresAt!).toISOString().slice(0,10)}. يرجى مراجعة الوثيقة واتخاذ الإجراء المناسب.` } });
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (e) { console.warn("retentionCron error", e); }
+}
+setTimeout(retentionCron, 10000);
+setInterval(retentionCron, 3600_000);
+
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`API server running on http://localhost:${info.port}`);
 });

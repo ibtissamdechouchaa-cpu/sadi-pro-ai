@@ -67,6 +67,11 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
   );
   const onHold = documents.filter((d) => d.legalHold);
   const failedJobs = jobs.filter((j) => j.stage === 'failed');
+  const pendingDisposal = documents.filter((d) => (d as any).archiveState === 'pending_disposal');
+  const permanentArchives = documents.filter((d) => (d as any).archiveState === 'permanent_archive');
+  const signedDocs = documents.filter((d) => (d as any).signatureState === 'signed' || d.approvalState === 'signed');
+  const confidentialDocs = documents.filter((d) => ['confidential','highly_confidential','restricted'].includes(d.classification));
+  const activeDocs = documents.filter((d) => (d as any).archiveState === 'active');
 
   const storagePct = percentage(usage.storageUsedGB, usage.storageLimitGB);
   const docPct = percentage(usage.documentCount, usage.documentLimit);
@@ -141,6 +146,20 @@ export function DashboardPage({ onNavigate, onOpenDocument }: DashboardPageProps
         />
       </div>
       )}
+      {/* Archive Manager — second row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={<FileText className="h-5 w-5" />} label={t('active')} value={activeDocs.length} sub={t('archiveActive')} color="primary" onClick={() => onNavigate('documents')} />
+        <StatCard icon={<Archive className="h-5 w-5" />} label={t('archivePermanent')} value={permanentArchives.length} sub={t('archivePermanent')} color="accent" onClick={() => onNavigate('documents')} />
+        <StatCard icon={<AlertCircle className="h-5 w-5" />} label={t('archivePendingDisposal')} value={pendingDisposal.length} sub={t('auditLogs')} color="warning" onClick={() => onNavigate('compliance')} />
+        <StatCard icon={<Shield className="h-5 w-5" />} label={t('classificationConfidential')} value={confidentialDocs.length} sub={t('security')} color="error" onClick={() => onNavigate('documents')} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label={t('approvalSigned')} value={signedDocs.length} sub={t('approvalSigned')} color="primary" onClick={() => onNavigate('documents')} />
+        <StatCard icon={<Shield className="h-5 w-5" />} label={t('legalHolds')} value={onHold.length} sub={t('legalHolds')} color="error" onClick={() => onNavigate('compliance')} />
+        <Card><CardBody className="flex flex-col justify-center h-full"><p className="text-xs text-neutral-500">{t('priority')} {t('critical')}</p><p className="text-xl font-bold text-red-600">{documents.filter((d) => (d as any).priority === 'critical').length}</p><p className="text-xs text-neutral-400">{t('critical')} / {t('high')} / {t('medium')}</p></CardBody></Card>
+        <Card><CardBody className="flex flex-col justify-center h-full"><p className="text-xs text-neutral-500">Reports</p><button onClick={() => onNavigate('reports')} className="text-sm font-medium text-primary-600 hover:underline text-left">Documents Expiring Soon →</button></CardBody></Card>
+      </div>
+      {isLoading ? null : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column */}

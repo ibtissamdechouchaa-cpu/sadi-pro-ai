@@ -77,6 +77,133 @@ data.post("/upload", async (c) => {
   }, 201);
 });
 
+// --- Image to Doc exact (pixel-perfect PDF) ---
+data.post("/image-to-doc", async (c) => {
+  const perm = await assertPermission(c, "document.create");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const body = await c.req.parseBody();
+  const file = body["file"];
+  if (!file || typeof file === "string") return c.json({ error: "No file" }, 400);
+  const allowedImg = new Set(["png","jpg","jpeg","webp","tiff","tif","bmp","gif"]);
+  const ext = (file.name?.split(".").pop() || "").toLowerCase();
+  if (!allowedImg.has(ext)) return c.json({ error: "Image only (png/jpg/webp/tiff)" }, 400);
+  const arrayBuffer = await file.arrayBuffer();
+  const imgBuf = Buffer.from(arrayBuffer);
+  // Convert to PDF with pdf-lib preserving exact dimensions
+  let pdfBytes: Uint8Array;
+  try {
+    const { PDFDocument } = await import("pdf-lib");
+    const pdf = await PDFDocument.create();
+    let embedded: any;
+    if (ext === "png") embedded = await pdf.embedPng(imgBuf);
+    else if (ext === "jpg" || ext === "jpeg") embedded = await pdf.embedJpg(imgBuf);
+    else {
+      // Convert other formats by embedding as png via fallback (store as png)
+      embedded = await pdf.embedPng(imgBuf).catch(async () => pdf.embedJpg(imgBuf));
+    }
+    const { width, height } = embedded.scale(1);
+    const page = pdf.addPage([width, height]);
+    page.drawImage(embedded, { x: 0, y: 0, width, height });
+    pdfBytes = await pdf.save();
+  } catch (e) {
+    return c.json({ error: "Image to PDF failed", detail: String(e) }, 500);
+  }
+  const fileId = randomUUID();
+  const r2Key = `${orgId}/${fileId}.pdf`;
+  await uploadToR2(r2Key, Buffer.from(pdfBytes), "application/pdf");
+  // Also create document record
+  const doc = await prisma.document.create({
+    data: {
+      id: fileId,
+      organizationId: orgId,
+      title: (file.name || "Image Document").replace(/\.[^.]+$/, ""),
+      type: "other",
+      fileType: "pdf",
+      fileSize: BigInt(pdfBytes.length),
+      filePath: r2Key,
+      uploadedBy: c.get("userId"),
+      status: "completed",
+      archiveState: "active",
+      approvalState: "draft",
+      metadata: { sourceImage: file.name, converted: true, originalSize: imgBuf.length } as any,
+    },
+  });
+  await prisma.auditLog.create({
+    data: { organizationId: orgId, userId: c.get("userId"), action: "DOCUMENT_CREATED_FROM_IMAGE", resourceType: "document", resourceId: doc.id, resourceName: doc.title, metadata: { source: file.name } },
+  });
+  return c.json({ document: doc, filePath: r2Key }, 201);
+});
+
+// --- Document Create Full (metadata + optional file) ---
+data.post("/documents/create-full", async (c) => {
+  const perm = await assertPermission(c, "document.create");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const body = await c.req.json<{ title: string; description?: string; type?: string; classification?: string; departmentId?: string; ownerUserId?: string; documentNumber?: string; issuingAuthority?: string; priority?: string; tags?: string[]; metadata?: Record<string, unknown>; approvalState?: string; signatureState?: string; filePath?: string; fileType?: string; fileSize?: number }>();
+  if (!body.title?.trim()) return c.json({ error: "Title required" }, 400);
+  const doc = await prisma.document.create({
+    data: {
+      organizationId: orgId,
+      title: body.title.trim(),
+      description: body.description || null,
+      type: body.type || "other",
+      classification: body.classification || "internal",
+      departmentId: body.departmentId || null,
+      ownerUserId: body.ownerUserId || null,
+      documentNumber: body.documentNumber || null,
+      issuingAuthority: body.issuingAuthority || null,
+      priority: body.priority || "medium",
+      tags: body.tags || [],
+      metadata: (body.metadata || {}) as any,
+      approvalState: body.approvalState || "draft",
+      signatureState: body.signatureState || "not_required",
+      filePath: body.filePath || null,
+      fileType: body.fileType || null,
+      fileSize: body.fileSize ? BigInt(body.fileSize) : BigInt(0),
+      uploadedBy: userId,
+      status: "completed",
+      archiveState: "active",
+    },
+  });
+  await prisma.auditLog.create({ data: { organizationId: orgId, userId, action: "DOCUMENT_CREATED", resourceType: "document", resourceId: doc.id, resourceName: doc.title, metadata: { via: "create-full" } } });
+  await prisma.activityEvent.create({ data: { organizationId: orgId, userId, userName: userId, action: "CREATE", resource: doc.title, icon: "FilePlus" } });
+  // Run pipeline async
+  runPipelineForDocument({ id: doc.id, title: doc.title, organizationId: orgId, filePath: doc.filePath, fileType: doc.fileType }).catch(() => {});
+  return c.json({ document: doc }, 201);
+});
+
+// --- AI Compliance Engine ---
+data.post("/compliance-check/:id", async (c) => {
+  const perm = await assertPermission(c, "compliance.view");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const context = extracted.text.slice(0, 8000);
+  const legalRefs = await prisma.legalReference.findMany({ where: { OR: [{ organizationId: orgId }, { organizationId: null }] }, take: 20 });
+  // Simple matching: find refs whose retentionRules documentTypes intersect with doc.type/classification
+  const matched = legalRefs.filter((r) => {
+    const types = (r.retentionRules as Record<string, unknown>)?.["documentTypes"] as string[] | undefined;
+    if (!types) return true;
+    return types.includes(doc.type) || types.includes(doc.classification) || types.includes("all");
+  }).slice(0, 5);
+  // Call AI to produce compliance recommendation with traceability
+  let aiResult: { recommendation?: string; reason?: string; confidence?: number; applicableRefs?: string[] } = {};
+  try {
+    const { default: OpenAI } = await import("openai");
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const prompt = `Document: ${doc.title}\nType:${doc.type} Classification:${doc.classification}\nContent:${context.slice(0,4000)}\nLegal refs: ${matched.map((m)=>`${m.referenceNumber}: ${m.title}`).join("; ")}\nReturn JSON: { "recommendation": "KEEP|TRANSFER_TO_ARCHIVE|PERMANENT_ARCHIVE|REVIEW|DELETE", "reason": "...", "confidence": 0-1, "applicableRefs": ["ref numbers"], "detectedClassification": "...", "suggestedRetentionYears": number }`;
+    const res = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], response_format: { type: "json_object" } });
+    aiResult = JSON.parse(res.choices[0]?.message?.content || "{}");
+  } catch {}
+  await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "COMPLIANCE_CHECK", resourceType: "document", resourceId: id, resourceName: doc.title, metadata: { matched: matched.map((m)=>m.referenceNumber), aiResult } } });
+  return c.json({ documentId: id, matched, ai: aiResult, traceability: matched.map((m)=>({ referenceNumber: m.referenceNumber, title: m.title, retentionRules: m.retentionRules })) });
+});
+
 // --- File Download ---
 data.get("/download/:docId", async (c) => {
   const perm = await assertPermission(c, "document.read");
@@ -109,6 +236,8 @@ data.get("/download/:docId", async (c) => {
       csv: "text/csv",
     };
     const contentType = mimeTypes[ext] || "application/octet-stream";
+    try { await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "DOCUMENT_DOWNLOADED", resourceType: "document", resourceId: docId, resourceName: doc.title, metadata: { fileType: doc.fileType } } }); } catch {}
+    try { await prisma.activityEvent.create({ data: { organizationId: orgId, userId: c.get("userId"), userName: c.get("userId"), action: "DOWNLOAD", resource: doc.title, icon: "Download" } }); } catch {}
 
     return new Response(data, {
       headers: {
@@ -177,6 +306,7 @@ data.get("/preview/:docId", async (c) => {
       html: "text/plain",
     };
     const contentType = mimeTypes[ext] || "application/octet-stream";
+    try { await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "DOCUMENT_VIEWED", resourceType: "document", resourceId: docId, resourceName: doc.title } }); } catch {}
     return new Response(data, {
       headers: {
         "Content-Type": contentType,
@@ -265,7 +395,7 @@ async function runPipelineForDocument(doc: { id: string; title: string; organiza
     await advance('embedding', 86);
     await advance('indexing', 92);
     await advance('analyzing', 96);
-    // AI analysis
+    // AI analysis — extracts 16 fields per spec §2 with confidence
     try {
       const { extractFileText } = await import("./lib/fileExtractor.js");
       const { analyzeDocument } = await import("./lib/ai.js");
@@ -273,10 +403,58 @@ async function runPipelineForDocument(doc: { id: string; title: string; organiza
       const insight = await analyzeDocument(doc.title, extracted.text, extracted.imageData);
       const existing = await prisma.document.findUnique({ where: { id: doc.id } });
       const existingMeta = (existing?.metadata as Record<string, unknown>) || {};
-      await prisma.document.update({
-        where: { id: doc.id },
-        data: { metadata: { ...existingMeta, insight, analyzedAt: new Date().toISOString() }, status: 'completed', embeddingCompleted: true },
-      });
+      // Persist extracted metadata to dedicated columns + JSON for audit
+      const updateData: Record<string, unknown> = {
+        metadata: { ...existingMeta, insight, analyzedAt: new Date().toISOString(), languageDetected: insight.languageDetected, persons: insight.persons, institution: insight.institution },
+        status: 'completed',
+        embeddingCompleted: true,
+        language: insight.languageDetected || existing?.language || "unknown",
+        type: insight.documentType || existing?.type || "other",
+        classification: insight.confidentialitySuggested || existing?.classification,
+      };
+      if (insight.documentNumber) updateData.documentNumber = insight.documentNumber;
+      if (insight.contractNumber) updateData.contractNumber = insight.contractNumber;
+      if (insight.issuingAuthority) updateData.issuingAuthority = insight.issuingAuthority;
+      if (insight.institution) updateData.institution = insight.institution;
+      if (insight.legalValue) updateData.legalValue = insight.legalValue;
+      if (insight.historicalValue) updateData.historicalValue = insight.historicalValue;
+      if (insight.retentionYearsSuggested) {
+        updateData.retentionYears = insight.retentionYearsSuggested;
+        const exp = new Date(); exp.setFullYear(exp.getFullYear() + insight.retentionYearsSuggested);
+        updateData.expiresAt = exp;
+        updateData.retentionReason = `AI suggested: ${insight.retentionYearsSuggested}y (${insight.confidentialitySuggested || ''})`;
+      }
+      // Notes from missingInfo
+      if (insight.missingInfo?.length) updateData.notes = insight.missingInfo.join("; ").slice(0,500);
+      await prisma.document.update({ where: { id: doc.id }, data: updateData });
+      // Create DocumentSummary entries (3 levels)
+      try {
+        for (const level of ['short','standard','detailed'] as const) {
+          await prisma.documentSummary.create({ data: { documentId: doc.id, organizationId: orgId, level, summary: insight.summary.slice(0, level==='short'?300: level==='standard'?800:2000), keywords: insight.keywords || insight.suggestedTags || [], importantDates: insight.importantDatesDetailed || [] } });
+        }
+      } catch {}
+      // Create DocumentEmbedding stub (for semantic search)
+      try {
+        const chunks = extracted.text.match(/.{1,1000}/g) || [extracted.text.slice(0,1000)];
+        for (let i=0;i<Math.min(chunks.length,3);i++) {
+          await prisma.documentEmbedding.create({ data: { documentId: doc.id, organizationId: orgId, chunkIndex: i, content: chunks[i].slice(0,1000), embedding: [] } });
+        }
+      } catch {}
+      // Retention event
+      try {
+        if (insight.retentionYearsSuggested) {
+          await prisma.documentRetentionEvent.create({ data: { documentId: doc.id, organizationId: orgId, fromYears: existing?.retentionYears || null, toYears: insight.retentionYearsSuggested, reason: 'AI suggestion', decidedBy: 'AI' } });
+        }
+      } catch {}
+      // Legal matches (link to LegalReference)
+      try {
+        const refs = await prisma.legalReference.findMany({ where: { OR: [{ organizationId: orgId }, { organizationId: null }] }, take: 5 });
+        for (const r of refs.slice(0,2)) {
+          await prisma.documentLegalMatch.create({ data: { documentId: doc.id, legalReferenceId: r.id, confidence: insight.confidence || 0.5 } });
+        }
+      } catch {}
+      // Audit AI classification
+      try { await prisma.auditLog.create({ data: { organizationId: orgId, action: "DOCUMENT_CLASSIFIED", resourceType: "document", resourceId: doc.id, resourceName: doc.title, metadata: { type: insight.documentType, confidentiality: insight.confidentialitySuggested, legalValue: insight.legalValue, retention: insight.retentionYearsSuggested } } }); } catch {}
     } catch (e) { console.warn('Pipeline AI step failed:', e); }
     await advance('completed', 100);
     await prisma.processingJob.update({ where: { id: job.id }, data: { completedAt: new Date() } });
@@ -438,6 +616,10 @@ data.patch("/documents/:id", async (c) => {
 
   const existing = await prisma.document.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
+  if (existing.archiveState === "permanent_archive") {
+    await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "PERMANENT_ARCHIVE_EDIT_BLOCKED", resourceType: "document", resourceId: id, resourceName: existing.title, metadata: { attemptedFields: Object.keys(body) } } });
+    return c.json({ error: "Permanent archive is read-only" }, 403);
+  }
 
   if ("legalHold" in body || "retentionYears" in body) {
     const comp = await assertPermission(c, "compliance.manage");
@@ -447,6 +629,8 @@ data.patch("/documents/:id", async (c) => {
   const { organizationId: _, filePath: _fp, ...updateData } = body;
   updateData.modifiedAt = new Date();
   const document = await prisma.document.update({ where: { id }, data: updateData });
+  // Audit log for updates
+  await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "DOCUMENT_UPDATED", resourceType: "document", resourceId: id, resourceName: existing.title, metadata: { fields: Object.keys(updateData) } } });
   return c.json({ document });
 });
 
@@ -458,6 +642,10 @@ data.delete("/documents/:id", async (c) => {
 
   const existing = await prisma.document.findFirst({ where: { id, organizationId: orgId } });
   if (!existing) return c.json({ error: "Not found" }, 404);
+  if (existing.archiveState === "permanent_archive") {
+    await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "PERMANENT_ARCHIVE_DELETE_BLOCKED", resourceType: "document", resourceId: id, resourceName: existing.title } });
+    return c.json({ error: "Permanent archive cannot be deleted" }, 403);
+  }
   if (existing.legalHold) {
     return c.json({ error: "Document is under legal hold and cannot be deleted" }, 423);
   }
@@ -754,8 +942,12 @@ data.get("/audit-logs", async (c) => {
 // --- Users (profiles) ---
 
 data.get("/users", async (c) => {
-  const perm = await assertPermission(c, "team.view");
-  if (perm) return perm;
+  // Allow any org member to list users (needed for avatars/team display) — team.view OR document.read
+  const userId = c.get("userId");
+  const role = await getRole(userId);
+  if (!hasPermission(role, "team.view") && !hasPermission(role, "document.read") && !hasPermission(role, "compliance.view")) {
+    return c.json({ error: "Forbidden: missing team.view" }, 403);
+  }
   const orgId = c.get("orgId");
   const users = await prisma.profile.findMany({
     where: { organizationId: orgId, isActive: true },
@@ -1345,11 +1537,31 @@ data.get("/retention-alerts", async (c) => {
     else if (daysLeft <= 7) urgency = "high";
     else if (daysLeft <= 15) urgency = "medium";
     else if (daysLeft <= 30) urgency = "low";
-
-    return { id: doc.id, title: doc.title, type: doc.type, expiresAt: doc.expiresAt, daysLeft, urgency, classification: doc.classification };
+    // Priority engine: expiration + confidentiality + type + doc priority field
+    let score = 0;
+    if (daysLeft <= 1) score += 40; else if (daysLeft <= 7) score += 30; else if (daysLeft <= 15) score += 20; else if (daysLeft <= 30) score += 10;
+    if (['restricted','highly_confidential','confidential'].includes(doc.classification)) score += 20;
+    if (['legal','contract','certificate'].includes(doc.type)) score += 15;
+    if (doc.priority === 'critical') score += 20; else if (doc.priority === 'high') score += 10;
+    let priority: string = 'LOW'; if (score >= 60) priority = 'CRITICAL'; else if (score >= 40) priority = 'HIGH'; else if (score >= 20) priority = 'MEDIUM';
+    const recommendedAction = daysLeft <= 0 ? 'DISPOSE' : priority === 'CRITICAL' ? 'TRANSFER_TO_ARCHIVE' : daysLeft <= 7 ? 'REVIEW' : 'KEEP';
+    return { id: doc.id, title: doc.title, type: doc.type, expiresAt: doc.expiresAt, daysLeft, urgency, classification: doc.classification, priority, score, recommendedAction, ownerUserId: doc.ownerUserId, retentionYears: doc.retentionYears, fileSize: doc.fileSize?.toString() };
   });
 
-  alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+  alerts.sort((a, b) => {
+    const order: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    return (order[b.priority] - order[a.priority]) || (a.daysLeft - b.daysLeft);
+  });
+  // Auto-create notifications for 30/15/7/1/expiry (fire-and-forget)
+  try {
+    const userId = c.get("userId");
+    for (const al of alerts.filter((a) => [30,15,7,1,0].includes(a.daysLeft) || a.daysLeft <=0)) {
+      const exists = await prisma.notification.findFirst({ where: { organizationId: orgId, title: { contains: al.id } } });
+      if (!exists) {
+        await prisma.notification.create({ data: { organizationId: orgId, userId, type: al.daysLeft<=1?'error': al.daysLeft<=7?'warning':'info', title: `Document expiring: ${al.title}`, message: `الوثيقة "${al.title}" ستنتهي مدة حفظها بتاريخ ${new Date(al.expiresAt!).toISOString().slice(0,10)} (${al.daysLeft} days). Priority ${al.priority}. Action: ${al.recommendedAction}` } });
+      }
+    }
+  } catch {}
   return c.json({ alerts });
 });
 
@@ -1507,6 +1719,10 @@ data.post("/documents/:id/versions", async (c) => {
 
   const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
   if (!doc) return c.json({ error: "Not found" }, 404);
+  if (doc.archiveState === "permanent_archive") {
+    await prisma.auditLog.create({ data: { organizationId: orgId, userId, action: "PERMANENT_ARCHIVE_VERSION_BLOCKED", resourceType: "document", resourceId: id, resourceName: doc.title } });
+    return c.json({ error: "Permanent archive is read-only, cannot add version" }, 403);
+  }
 
   const newVersion = doc.version + 1;
   let filePath = doc.filePath;

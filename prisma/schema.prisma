@@ -98,6 +98,13 @@ model Document {
   sharedWith        String[]
   documentNumber    String?
   issuingAuthority  String?
+  documentDate      DateTime?
+  notes             String?
+  contractNumber    String?
+  institution       String?
+  legalValue        String?   // high / medium / low / permanent
+  historicalValue   String?
+  sourceLanguage    String?
   metadata          Json      @default("{}")
   deletedAt         DateTime?
   createdAt         DateTime  @default(now())
@@ -169,6 +176,65 @@ model LegalReference {
 
   @@index([referenceType])
   @@index([organizationId])
+}
+
+model DocumentSummary {
+  id              String    @id @default(uuid())
+  documentId      String
+  organizationId  String
+  level           String    // short | standard | detailed
+  summary         String
+  keywords        String[]
+  importantDates  Json      @default("[]")
+  parties         Json      @default("[]")
+  createdAt       DateTime  @default(now())
+  @@index([documentId])
+  @@index([organizationId])
+}
+
+model DocumentEmbedding {
+  id              String    @id @default(uuid())
+  documentId      String
+  organizationId  String
+  chunkIndex      Int       @default(0)
+  content         String
+  embedding       Json      @default("[]")
+  createdAt       DateTime  @default(now())
+  @@index([documentId])
+  @@index([organizationId])
+}
+
+model DocumentRetentionEvent {
+  id              String    @id @default(uuid())
+  documentId      String
+  organizationId  String
+  fromYears       Int?
+  toYears         Int
+  reason          String?
+  decidedBy       String?
+  decidedAt       DateTime  @default(now())
+  @@index([documentId])
+}
+
+model LegalRule {
+  id              String    @id @default(uuid())
+  referenceId     String?
+  ruleType        String    // retention | access | disposal | archive
+  condition       Json      @default("{}")
+  action          String
+  priority        Int       @default(0)
+  createdAt       DateTime  @default(now())
+  @@index([referenceId])
+}
+
+model DocumentLegalMatch {
+  id              String    @id @default(uuid())
+  documentId      String
+  legalReferenceId String
+  confidence      Float     @default(0)
+  matchedAt       DateTime  @default(now())
+  @@index([documentId])
+  @@index([legalReferenceId])
 }
 
 model Signature {
@@ -283,6 +349,18 @@ model Collection {
   createdBy       String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model DocumentTemplate {
+  id              String    @id @default(uuid())
+  organizationId  String?
+  name            String
+  type            String    @default("other")
+  classification  String    @default("internal")
+  fields          Json      @default("{}")
+  isSystem        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  @@index([organizationId])
 }
 
 model Workflow {

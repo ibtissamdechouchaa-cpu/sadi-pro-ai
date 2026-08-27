@@ -72,6 +72,7 @@ export const classificationConfig: Record<ClassificationLevel, { label: string; 
   internal: { label: 'Internal', labelKey: 'classificationInternal', color: 'bg-primary-50 text-primary-700 border-primary-200' },
   confidential: { label: 'Confidential', labelKey: 'classificationConfidential', color: 'bg-warning-50 text-warning-700 border-warning-200' },
   highly_confidential: { label: 'Highly Confidential', labelKey: 'classificationHighlyConfidential', color: 'bg-error-50 text-error-700 border-error-200' },
+  restricted: { label: 'Restricted', labelKey: 'classificationRestricted', color: 'bg-neutral-900 text-white border-neutral-900' },
 };
 
 export function getClassificationLabel(level: ClassificationLevel, t: (key: string) => string): string {
@@ -83,6 +84,7 @@ export const archiveConfig: Record<ArchiveState, { label: string; labelKey: stri
   active: { label: 'Active', labelKey: 'archiveActive', color: 'bg-success-50 text-success-700' },
   inactive: { label: 'Inactive', labelKey: 'archiveInactive', color: 'bg-neutral-100 text-neutral-600' },
   archived: { label: 'Archived', labelKey: 'archiveArchived', color: 'bg-neutral-100 text-neutral-600' },
+  permanent_archive: { label: 'Permanent Archive', labelKey: 'archivePermanent', color: 'bg-primary-100 text-primary-700' },
   on_hold: { label: 'On Hold', labelKey: 'archiveOnHold', color: 'bg-warning-50 text-warning-700' },
   pending_disposal: { label: 'Pending Disposal', labelKey: 'archivePendingDisposal', color: 'bg-warning-50 text-warning-700' },
   disposed: { label: 'Disposed', labelKey: 'archiveDisposed', color: 'bg-neutral-100 text-neutral-500' },
@@ -98,6 +100,8 @@ export const approvalConfig: Record<ApprovalState, { label: string; labelKey: st
   pending_review: { label: 'Pending Review', labelKey: 'approvalPendingReview', color: 'bg-warning-50 text-warning-700' },
   approved: { label: 'Approved', labelKey: 'approvalApproved', color: 'bg-success-50 text-success-700' },
   rejected: { label: 'Rejected', labelKey: 'approvalRejected', color: 'bg-error-50 text-error-700' },
+  signed: { label: 'Signed', labelKey: 'approvalSigned', color: 'bg-primary-50 text-primary-700' },
+  active: { label: 'Active', labelKey: 'approvalActive', color: 'bg-success-50 text-success-700' },
   archived: { label: 'Archived', labelKey: 'approvalArchived', color: 'bg-neutral-100 text-neutral-600' },
 };
 

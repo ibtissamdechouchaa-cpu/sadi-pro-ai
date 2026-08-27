@@ -23,11 +23,11 @@ export type DocType =
   | 'technical'
   | 'other';
 
-export type ClassificationLevel = 'public' | 'internal' | 'confidential' | 'highly_confidential';
+export type ClassificationLevel = 'public' | 'internal' | 'confidential' | 'highly_confidential' | 'restricted';
 
-export type ArchiveState = 'active' | 'inactive' | 'archived' | 'on_hold' | 'pending_disposal' | 'disposed';
+export type ArchiveState = 'active' | 'inactive' | 'archived' | 'permanent_archive' | 'on_hold' | 'pending_disposal' | 'disposed';
 
-export type ApprovalState = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived';
+export type ApprovalState = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'signed' | 'active' | 'archived';
 
 export type Language = 'ar' | 'fr' | 'en' | 'unknown';
 

@@ -306,6 +306,58 @@ type TranslationKeys = {
   faqSecurityAnswer: string;
   ctaTitle: string;
   ctaDesc: string;
+
+  // New features — i18n full coverage
+  create: string;
+  createDocument: string;
+  createDocumentDesc: string;
+  documentNumber: string;
+  issuingAuthority: string;
+  documentDate: string;
+  creationDate: string;
+  priority: string;
+  workflow: string;
+  retentionManagement: string;
+  retentionSuggestion: string;
+  confidence: string;
+  applicableRule: string;
+  accept: string;
+  modify: string;
+  reject: string;
+  traceability: string;
+  electronicSignature: string;
+  addSigner: string;
+  signatures: string;
+  translate: string;
+  translateToArabic: string;
+  translateToFrench: string;
+  translateToEnglish: string;
+  reports: string;
+  expiringDocs: string;
+  critical: string;
+  high: string;
+  medium: string;
+  low: string;
+  recommendedAction: string;
+  disposalQueue: string;
+  workflowStepper: string;
+  classificationRestricted: string;
+  archivePermanent: string;
+  approvalSigned: string;
+  approvalActive: string;
+  previewBeforeSave: string;
+  template: string;
+  templateBlank: string;
+  templateContract: string;
+  templateReport: string;
+  templateLetter: string;
+  templateInvoice: string;
+  saveAsDraft: string;
+  sendForReview: string;
+  sendForSignature: string;
+  toPermanentArchive: string;
+  requestDisposal: string;
+  languageDetected: string;
 };
 
 const translations: Record<Locale, TranslationKeys> = {
@@ -599,6 +651,57 @@ const translations: Record<Locale, TranslationKeys> = {
     faqSecurityAnswer: 'Yes. Files are stored in Cloudflare R2 (encrypted at rest), all API calls use JWT authentication, passwords are bcrypt-hashed, and all endpoints have RBAC guards.',
     ctaTitle: 'Transform your archive into an intelligent information source.',
     ctaDesc: 'Start organizing your documents, extracting information, and accessing them faster.',
+
+    create: 'Create',
+    createDocument: 'Create Document',
+    createDocumentDesc: 'Template · Upload · Preview · Workflow',
+    documentNumber: 'Document Number',
+    issuingAuthority: 'Issuing Authority',
+    documentDate: 'Document Date',
+    creationDate: 'Creation Date',
+    priority: 'Priority',
+    workflow: 'Workflow',
+    retentionManagement: 'Retention Management',
+    retentionSuggestion: 'AI Suggestion',
+    confidence: 'Confidence',
+    applicableRule: 'Applicable Rule',
+    accept: 'Accept',
+    modify: 'Modify',
+    reject: 'Reject',
+    traceability: 'Traceability',
+    electronicSignature: 'Electronic Signature',
+    addSigner: 'Add Signer',
+    signatures: 'Signatures',
+    translate: 'Translate',
+    translateToArabic: 'Translate to Arabic',
+    translateToFrench: 'Translate to French',
+    translateToEnglish: 'Translate to English',
+    reports: 'Reports',
+    expiringDocs: 'Documents Expiring Soon',
+    critical: 'CRITICAL',
+    high: 'HIGH',
+    medium: 'MEDIUM',
+    low: 'LOW',
+    recommendedAction: 'Recommended Action',
+    disposalQueue: 'Disposal Queue',
+    workflowStepper: 'Workflow',
+    classificationRestricted: 'Restricted',
+    archivePermanent: 'Permanent Archive',
+    approvalSigned: 'Signed',
+    approvalActive: 'Active',
+    previewBeforeSave: 'Preview before save',
+    template: 'Template',
+    templateBlank: 'Blank',
+    templateContract: 'Contract',
+    templateReport: 'Report',
+    templateLetter: 'Letter',
+    templateInvoice: 'Invoice',
+    saveAsDraft: 'Save as Draft',
+    sendForReview: 'Send for Review',
+    sendForSignature: 'Send for Signature',
+    toPermanentArchive: 'To Permanent Archive',
+    requestDisposal: 'Request Disposal',
+    languageDetected: 'Language',
   },
 
   ar: {
@@ -891,6 +994,57 @@ const translations: Record<Locale, TranslationKeys> = {
     faqSecurityAnswer: 'نعم. الملفات مخزنة في Cloudflare R2 (مشفرة)، جميع API تستخدم JWT، كلمات المرور مشفرة بـ bcrypt، جميع endpoints محمية بـ RBAC.',
     ctaTitle: 'حوّل أرشيفك إلى مصدر ذكي للمعلومات.',
     ctaDesc: 'ابدأ في تنظيم وثائقك، استخراج المعلومات منها، والوصول إليها بشكل أسرع.',
+
+    create: 'إنشاء',
+    createDocument: 'إنشاء وثيقة',
+    createDocumentDesc: 'قالب · رفع · معاينة · سير العمل',
+    documentNumber: 'رقم الوثيقة',
+    issuingAuthority: 'الجهة المصدرة',
+    documentDate: 'تاريخ الوثيقة',
+    creationDate: 'تاريخ الإنشاء',
+    priority: 'الأولوية',
+    workflow: 'سير العمل',
+    retentionManagement: 'إدارة الاحتفاظ',
+    retentionSuggestion: 'اقتراح الذكاء الاصطناعي',
+    confidence: 'الثقة',
+    applicableRule: 'القاعدة المطبقة',
+    accept: 'قبول',
+    modify: 'تعديل',
+    reject: 'رفض',
+    traceability: 'التتبع',
+    electronicSignature: 'التوقيع الإلكتروني',
+    addSigner: 'إضافة موقع',
+    signatures: 'التواقيع',
+    translate: 'ترجمة',
+    translateToArabic: 'ترجمة إلى العربية',
+    translateToFrench: 'ترجمة إلى الفرنسية',
+    translateToEnglish: 'ترجمة إلى الإنجليزية',
+    reports: 'التقارير',
+    expiringDocs: 'الوثائق التي تنتهي قريباً',
+    critical: 'حرج',
+    high: 'مرتفع',
+    medium: 'متوسط',
+    low: 'منخفض',
+    recommendedAction: 'الإجراء الموصى به',
+    disposalQueue: 'قائمة الإتلاف',
+    workflowStepper: 'سير العمل',
+    classificationRestricted: 'محظور',
+    archivePermanent: 'أرشيف دائم',
+    approvalSigned: 'موقع',
+    approvalActive: 'نشط',
+    previewBeforeSave: 'معاينة قبل الحفظ',
+    template: 'قالب',
+    templateBlank: 'فارغ',
+    templateContract: 'عقد',
+    templateReport: 'تقرير',
+    templateLetter: 'رسالة',
+    templateInvoice: 'فاتورة',
+    saveAsDraft: 'حفظ كمسودة',
+    sendForReview: 'إرسال للمراجعة',
+    sendForSignature: 'إرسال للتوقيع',
+    toPermanentArchive: 'إلى الأرشيف الدائم',
+    requestDisposal: 'طلب الإتلاف',
+    languageDetected: 'اللغة',
   },
 
   fr: {
@@ -1183,6 +1337,57 @@ const translations: Record<Locale, TranslationKeys> = {
     faqSecurityAnswer: 'Oui. Les fichiers sont stockés dans Cloudflare R2 (chiffrés), tous les appels API utilisent JWT, les mots de passe sont hashés en bcrypt, et tous les endpoints sont protégés par RBAC.',
     ctaTitle: 'Transformez votre archive en source intelligente d\'informations.',
     ctaDesc: 'Commencez à organiser vos documents, extraire les informations et y accéder plus rapidement.',
+
+    create: 'Créer',
+    createDocument: 'Créer un document',
+    createDocumentDesc: 'Modèle · Téléversement · Aperçu · Flux',
+    documentNumber: 'Numéro de document',
+    issuingAuthority: 'Autorité émettrice',
+    documentDate: 'Date du document',
+    creationDate: 'Date de création',
+    priority: 'Priorité',
+    workflow: 'Flux de travail',
+    retentionManagement: 'Gestion de la rétention',
+    retentionSuggestion: 'Suggestion IA',
+    confidence: 'Confiance',
+    applicableRule: 'Règle applicable',
+    accept: 'Accepter',
+    modify: 'Modifier',
+    reject: 'Rejeter',
+    traceability: 'Traçabilité',
+    electronicSignature: 'Signature électronique',
+    addSigner: 'Ajouter signataire',
+    signatures: 'Signatures',
+    translate: 'Traduire',
+    translateToArabic: 'Traduire en arabe',
+    translateToFrench: 'Traduire en français',
+    translateToEnglish: 'Traduire en anglais',
+    reports: 'Rapports',
+    expiringDocs: 'Documents expirant bientôt',
+    critical: 'CRITIQUE',
+    high: 'ÉLEVÉ',
+    medium: 'MOYEN',
+    low: 'FAIBLE',
+    recommendedAction: 'Action recommandée',
+    disposalQueue: 'File de destruction',
+    workflowStepper: 'Flux',
+    classificationRestricted: 'Restreint',
+    archivePermanent: 'Archive permanente',
+    approvalSigned: 'Signé',
+    approvalActive: 'Actif',
+    previewBeforeSave: 'Aperçu avant enregistrement',
+    template: 'Modèle',
+    templateBlank: 'Vierge',
+    templateContract: 'Contrat',
+    templateReport: 'Rapport',
+    templateLetter: 'Lettre',
+    templateInvoice: 'Facture',
+    saveAsDraft: 'Enregistrer brouillon',
+    sendForReview: 'Envoyer pour révision',
+    sendForSignature: 'Envoyer pour signature',
+    toPermanentArchive: 'Vers archive permanente',
+    requestDisposal: 'Demander destruction',
+    languageDetected: 'Langue',
   },
 };
 
