@@ -6,6 +6,7 @@ import { analyzeDocument, generateSearchAnswer, geminiVisionChat } from "../lib/
 import { extractFileText } from "../lib/fileExtractor.js";
 import { assertPermission, getRole, hasPermission } from "../lib/permissions.js";
 import { uploadToR2, downloadFromR2, deleteFromR2, isR2Configured } from "../lib/r2.js";
+import fs from "fs";
 import { generateInvoicePdf } from "../lib/invoice.js";
 
 const data = new Hono();
@@ -392,15 +393,21 @@ data.get("/preview/:docId", async (c) => {
   }
 });
 
-// --- R2 Diagnostics (admin) ---
+// --- R2 Diagnostics (admin) — also readable as /api/r2-status without auth (see server/index.ts) ---
+function readSecretData(name: string): string {
+  if (process.env[name]) return process.env[name] as string;
+  try { const p = `/etc/secrets/${name}`; if (fs.existsSync(p)) return fs.readFileSync(p, "utf8").trim(); } catch {}
+  try { const p2 = `/etc/secrets/${name}.txt`; if (fs.existsSync(p2)) return fs.readFileSync(p2, "utf8").trim(); } catch {}
+  return "";
+}
 data.get("/r2-status", async (c) => {
   const orgId = c.get("orgId");
   const role = getRole(c);
-  const hasAccess = hasPermission(role, "org.manage") || hasPermission(role, "billing.manage");
-  const endpointRaw = process.env.R2_ENDPOINT || "";
-  const bucket = process.env.R2_BUCKET || "";
-  const hasKey = Boolean(process.env.R2_ACCESS_KEY_ID);
-  const hasSecret = Boolean(process.env.R2_SECRET_ACCESS_KEY);
+  const hasAccess = (() => { try { return hasPermission(role, "org.manage") || hasPermission(role, "billing.manage"); } catch { return false; }})();
+  const endpointRaw = readSecretData("R2_ENDPOINT");
+  const bucket = readSecretData("R2_BUCKET");
+  const hasKey = Boolean(readSecretData("R2_ACCESS_KEY_ID"));
+  const hasSecret = Boolean(readSecretData("R2_SECRET_ACCESS_KEY"));
   let endpointNormalized = endpointRaw.trim().replace(/\/+$/, "");
   if (bucket && endpointNormalized.endsWith(`/${bucket}`)) endpointNormalized = endpointNormalized.slice(0, -(bucket.length + 1));
   if (!bucket && endpointNormalized.endsWith("/sadi-pro-doc")) endpointNormalized = endpointNormalized.slice(0, -"/sadi-pro-doc".length);
@@ -409,7 +416,7 @@ data.get("/r2-status", async (c) => {
   if (isR2Configured) {
     try {
       const { S3Client, ListObjectsV2Command } = await import("@aws-sdk/client-s3");
-      const client = new S3Client({ region: "auto", endpoint: endpointNormalized, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID!, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY! } });
+      const client = new S3Client({ region: "auto", endpoint: endpointNormalized, credentials: { accessKeyId: readSecretData("R2_ACCESS_KEY_ID"), secretAccessKey: readSecretData("R2_SECRET_ACCESS_KEY") } });
       const res: any = await client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
       probe = { ok: true, keyCount: res.KeyCount ?? 0, hasContents: (res.KeyCount ?? 0) > 0 };
     } catch (e: any) {

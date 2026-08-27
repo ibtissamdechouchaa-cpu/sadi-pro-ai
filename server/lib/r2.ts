@@ -7,12 +7,29 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { promises as fs } from "fs";
+import fsSync from "fs";
 import path from "path";
 
-const R2_ENDPOINT_RAW = process.env.R2_ENDPOINT || "";
-const R2_BUCKET_RAW = process.env.R2_BUCKET || "";
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "";
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "";
+function readSecret(name: string): string {
+  // 1) Env var (normal)
+  if (process.env[name]) return process.env[name] as string;
+  // 2) Render Secret File at /etc/secrets/<name> (Render Secret Files feature)
+  try {
+    const p = path.join("/etc/secrets", name);
+    if (fsSync.existsSync(p)) return fsSync.readFileSync(p, "utf8").trim();
+  } catch {}
+  // 3) Also support lowercase file with .txt suffix
+  try {
+    const p2 = path.join("/etc/secrets", `${name}.txt`);
+    if (fsSync.existsSync(p2)) return fsSync.readFileSync(p2, "utf8").trim();
+  } catch {}
+  return "";
+}
+
+const R2_ENDPOINT_RAW = readSecret("R2_ENDPOINT");
+const R2_BUCKET_RAW = readSecret("R2_BUCKET");
+const R2_ACCESS_KEY_ID = readSecret("R2_ACCESS_KEY_ID");
+const R2_SECRET_ACCESS_KEY = readSecret("R2_SECRET_ACCESS_KEY");
 
 // Normalize: strip bucket path if user pasted full URL https://xxx.r2.cloudflarestorage.com/sadi-pro-doc
 const R2_ENDPOINT = (() => {

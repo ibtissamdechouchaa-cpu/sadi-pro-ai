@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { webcrypto } from "node:crypto";
+import fs from "fs";
 
 if (typeof globalThis.crypto === "undefined") {
   (globalThis as any).crypto = webcrypto;
@@ -70,12 +71,18 @@ app.get("/api/health", async (c) => {
   }
 });
 
+function readSecretForStatus(name: string): string {
+  if (process.env[name]) return process.env[name] as string;
+  try { const p = `/etc/secrets/${name}`; if (fs.existsSync(p)) return fs.readFileSync(p, "utf8").trim(); } catch {}
+  try { const p2 = `/etc/secrets/${name}.txt`; if (fs.existsSync(p2)) return fs.readFileSync(p2, "utf8").trim(); } catch {}
+  return "";
+}
 app.get("/api/r2-status", async (c) => {
   c.header("Cache-Control", "no-store");
-  const endpointRaw = process.env.R2_ENDPOINT || "";
-  const bucket = process.env.R2_BUCKET || "";
-  const hasKey = Boolean(process.env.R2_ACCESS_KEY_ID);
-  const hasSecret = Boolean(process.env.R2_SECRET_ACCESS_KEY);
+  const endpointRaw = readSecretForStatus("R2_ENDPOINT");
+  const bucket = readSecretForStatus("R2_BUCKET");
+  const hasKey = Boolean(readSecretForStatus("R2_ACCESS_KEY_ID"));
+  const hasSecret = Boolean(readSecretForStatus("R2_SECRET_ACCESS_KEY"));
   let endpointNormalized = endpointRaw.trim().replace(/\/+$/, "");
   if (bucket && endpointNormalized.endsWith(`/${bucket}`)) endpointNormalized = endpointNormalized.slice(0, -(bucket.length + 1));
   if (!bucket && endpointNormalized.endsWith("/sadi-pro-doc")) endpointNormalized = endpointNormalized.slice(0, -"/sadi-pro-doc".length);
@@ -83,10 +90,8 @@ app.get("/api/r2-status", async (c) => {
   let probe: any = null;
   if (isConfigured) {
     try {
-      const { S3Client, ListObjectsV2Command } = await import("./lib/r2.js");
-      // Reuse raw import via aws-sdk
       const { S3Client: S3 } = await import("@aws-sdk/client-s3");
-      const client = new S3({ region: "auto", endpoint: endpointNormalized, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID!, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY! } });
+      const client = new S3({ region: "auto", endpoint: endpointNormalized, credentials: { accessKeyId: readSecretForStatus("R2_ACCESS_KEY_ID"), secretAccessKey: readSecretForStatus("R2_SECRET_ACCESS_KEY") } });
       const res: any = await client.send(new (await import("@aws-sdk/client-s3")).ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
       probe = { ok: true, keyCount: res.KeyCount ?? 0 };
     } catch (e: any) {
