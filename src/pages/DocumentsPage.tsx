@@ -163,23 +163,40 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
   };
 
   const handleRowDownload = async (doc: Document) => {
-    if (!doc.filePath) {
-      toast('warning', t('noDocuments'));
-      return;
-    }
     try {
       const token = localStorage.getItem('sadi_token');
-      const res = await fetch(`/api/data/download/${doc.id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${doc.title}.${doc.fileType || 'bin'}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`/api/data/download/${doc.id}`, { headers });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const cd = res.headers.get('Content-Disposition') || '';
+        const m = cd.match(/filename\*?=(?:UTF-8''|")?([^";\n]+)/);
+        a.download = m ? decodeURIComponent(m[1].replace(/"/g, '')) : `${doc.title}.${doc.fileType || 'bin'}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        return;
+      }
+      if (res.status === 404) {
+        const pr = await fetch(`/api/data/preview/${doc.id}`, { headers });
+        if (pr.ok) {
+          const blob = await pr.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = blob.type.includes('html') ? `${doc.title}.html` : `${doc.title}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+          return;
+        }
+      }
+      throw new Error('Download failed');
     } catch (err) {
       console.error('Download failed:', err);
       toast('error', t('error'));

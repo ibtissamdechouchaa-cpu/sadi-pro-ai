@@ -216,25 +216,71 @@ data.get("/download/:docId", async (c) => {
     where: { id: docId, organizationId: orgId, deletedAt: null },
   });
 
-  if (!doc || !doc.filePath) {
+  if (!doc) {
     return c.json({ error: "File not found" }, 404);
+  }
+
+  // Docs without stored file (created via Word editor or seed data): synthesize a .txt download
+  if (!doc.filePath) {
+    const meta = doc.metadata as Record<string, unknown>;
+    const editorHtml = (meta?.editorHtml as string) || (meta?.previewText as string);
+    let textContent: string;
+    let fileName: string;
+    let ct: string;
+    if (editorHtml && editorHtml.includes('<')) {
+      textContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${doc.title}</title></head><body>${editorHtml}</body></html>`;
+      fileName = `${doc.title.slice(0,80)}.html`;
+      ct = "text/html; charset=utf-8";
+    } else {
+      const lines = [
+        doc.title,
+        "=".repeat(doc.title.length),
+        "",
+        `Type: ${doc.type}  ·  Classification: ${doc.classification}  ·  Status: ${doc.status}`,
+        `Tags: ${(doc.tags || []).join(", ") || "—"}`,
+        doc.hash ? `Hash: ${doc.hash}` : "",
+        "",
+        editorHtml || `Content for "${doc.title}" — no file attached.`,
+        doc.description ? `\nDescription: ${doc.description}` : "",
+      ].filter(Boolean).join("\n");
+      textContent = lines;
+      fileName = `${doc.title.slice(0,80)}.txt`;
+      ct = "text/plain; charset=utf-8";
+    }
+    return new Response(textContent, {
+      headers: {
+        "Content-Type": ct,
+        "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      },
+    });
   }
 
   const r2Key = doc.filePath;
   try {
     const data = await downloadFromR2(r2Key);
-    const ext = doc.fileType || "bin";
+    const ext = (doc.fileType || "bin").toLowerCase();
     const mimeTypes: Record<string, string> = {
       pdf: "application/pdf",
       doc: "application/msword",
       docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       xls: "application/vnd.ms-excel",
       xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ppt: "application/vnd.ms-powerpoint",
+      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       png: "image/png",
       jpg: "image/jpeg",
       jpeg: "image/jpeg",
+      webp: "image/webp",
+      gif: "image/gif",
+      bmp: "image/bmp",
+      tiff: "image/tiff",
+      tif: "image/tiff",
+      svg: "image/svg+xml",
       txt: "text/plain",
       csv: "text/csv",
+      json: "application/json",
+      xml: "text/plain",
+      html: "text/html; charset=utf-8",
     };
     const contentType = mimeTypes[ext] || "application/octet-stream";
     try { await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "DOCUMENT_DOWNLOADED", resourceType: "document", resourceId: docId, resourceName: doc.title, metadata: { fileType: doc.fileType } } }); } catch {}
@@ -304,19 +350,29 @@ data.get("/preview/:docId", async (c) => {
 
   try {
     const data = await downloadFromR2(doc.filePath);
-    const ext = doc.fileType || "bin";
+    const ext = (doc.fileType || "bin").toLowerCase();
     const mimeTypes: Record<string, string> = {
       pdf: "application/pdf",
       png: "image/png",
       jpg: "image/jpeg",
       jpeg: "image/jpeg",
       webp: "image/webp",
+      gif: "image/gif",
+      bmp: "image/bmp",
       tiff: "image/tiff",
+      tif: "image/tiff",
+      svg: "image/svg+xml",
       txt: "text/plain",
       csv: "text/csv",
       json: "application/json",
       xml: "text/plain",
       html: "text/html; charset=utf-8",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ppt: "application/vnd.ms-powerpoint",
+      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     };
     const contentType = mimeTypes[ext] || "application/octet-stream";
     try { await prisma.auditLog.create({ data: { organizationId: orgId, userId: c.get("userId"), action: "DOCUMENT_VIEWED", resourceType: "document", resourceId: docId, resourceName: doc.title } }); } catch {}
