@@ -10,52 +10,64 @@ interface Props {
   title: string;
 }
 
-const OFFICE_TYPES = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv']);
-const IMAGE_TYPES = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'tif']);
+const OFFICE_TYPES = new Set(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']);
+const IMAGE_TYPES = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'tif', 'svg']);
 const TEXT_TYPES = new Set(['txt', 'json', 'xml', 'csv', 'html']);
+const PDF_TYPES = new Set(['pdf']);
+
+function getExt(fileType: string): string {
+  return (fileType || '').toLowerCase().replace(/^\./, '');
+}
 
 export function DocumentPreview({ docId, fileType, title }: Props) {
-  const ext = fileType.toLowerCase();
+  const ext = getExt(fileType);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
+  const [contentType, setContentType] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setObjectUrl(null);
     setTextContent(null);
+    setContentType('');
 
     const token = localStorage.getItem('sadi_token');
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-    // Fetch once and route by actual Content-Type, not by file extension
     fetch(`/api/data/preview/${docId}`, { headers })
       .then(async (r) => {
+        if (cancelled) return;
         if (!r.ok) throw new Error('Preview failed');
         const ct = r.headers.get('Content-Type') || '';
-        if (ct.includes('text/plain') || TEXT_TYPES.has(ext)) {
-          // If server says text/plain (synthesized seed doc) or extension is text-like, render as text
-          // Peek as text; if it looks like plain text, keep it
-          if (ct.includes('text/plain')) {
-            const t = await r.text();
-            setTextContent(t.slice(0, 15000));
-            setLoading(false);
-            return;
-          }
-          // For declared text types, also handle as text
+        setContentType(ct);
+
+        if (ct.includes('text/plain') || ct.includes('text/html') || TEXT_TYPES.has(ext)) {
           const t = await r.text();
-          setTextContent(t.slice(0, 15000));
-          setLoading(false);
+          if (!cancelled) {
+            setTextContent(t.slice(0, 20000));
+            setLoading(false);
+          }
           return;
         }
+
         const blob = await r.blob();
+        if (cancelled) return;
         if (blob.size === 0) throw new Error('Empty file');
         setObjectUrl(URL.createObjectURL(blob));
         setLoading(false);
       })
-      .catch(() => { setError('Unable to load preview.'); setLoading(false); });
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err?.message || 'Unable to load preview.');
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
   }, [docId, ext]);
 
   useEffect(() => {
@@ -73,10 +85,11 @@ export function DocumentPreview({ docId, fileType, title }: Props) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${title}.${ext}`;
+        a.download = `${title}.${ext || 'bin'}`;
         a.click();
         URL.revokeObjectURL(url);
-      });
+      })
+      .catch(() => {});
   };
 
   if (loading) {
@@ -98,8 +111,14 @@ export function DocumentPreview({ docId, fileType, title }: Props) {
     );
   }
 
-  // Text files: show in pre
   if (textContent !== null) {
+    if (contentType.includes('text/html') || ext === 'html') {
+      return (
+        <div className="rounded-lg border border-neutral-200 bg-white overflow-auto" style={{ maxHeight: 650 }}>
+          <div dangerouslySetInnerHTML={{ __html: textContent }} className="p-4" />
+        </div>
+      );
+    }
     return (
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
         <pre className="max-h-[550px] overflow-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-neutral-700">{textContent}</pre>
@@ -107,17 +126,22 @@ export function DocumentPreview({ docId, fileType, title }: Props) {
     );
   }
 
-  // Image: native img
   if (objectUrl && IMAGE_TYPES.has(ext)) {
+    if (ext === 'svg') {
+      return (
+        <div className="rounded-lg border border-neutral-200 bg-white p-4 overflow-auto" style={{ maxHeight: 650 }}>
+          <div dangerouslySetInnerHTML={{ __html: '' }} />
+          <img src={objectUrl} alt={title} className="max-h-[600px] w-full object-contain" />
+        </div>
+      );
+    }
     return <img src={objectUrl} alt={title} className="max-h-[600px] w-full rounded-lg border object-contain bg-white" />;
   }
 
-  // PDF: native iframe
-  if (objectUrl && ext === 'pdf') {
+  if (objectUrl && PDF_TYPES.has(ext)) {
     return <iframe src={objectUrl} title={title} className="h-[650px] w-full rounded-lg border bg-white" />;
   }
 
-  // Office docs + remaining: lazy OfficeViewer (avoids crashing top-level import)
   if (objectUrl && OFFICE_TYPES.has(ext)) {
     return (
       <Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" /></div>}>
@@ -126,7 +150,6 @@ export function DocumentPreview({ docId, fileType, title }: Props) {
     );
   }
 
-  // Fallback: offer download + try OfficeViewer for any other supported type
   if (objectUrl) {
     return (
       <div>

@@ -36,6 +36,7 @@ import {
   archiveConfig,
   approvalConfig,
   languageConfig,
+  getLanguageLabel,
   roleConfig,
   formatBytes,
   formatDate,
@@ -195,7 +196,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
               <span className="text-xs text-neutral-400">·</span>
               <span className="text-xs text-neutral-500">{doc.pageCount} {t('documents')}</span>
               <span className="text-xs text-neutral-400">·</span>
-              <span className="text-xs text-neutral-500">{languageConfig[doc.language]}</span>
+              <span className="text-xs text-neutral-500">{getLanguageLabel(doc.language, t)}</span>
             </div>
           </div>
         </div>
@@ -465,7 +466,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                       </div>
                       <div className="rounded-md bg-white border border-neutral-100 p-2">
                         <p className="text-neutral-400">{t('language')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">{languageConfig[doc.language]}</p>
+                        <p className="font-medium text-neutral-900 mt-0.5">{getLanguageLabel(doc.language, t)}</p>
                       </div>
                     </div>
                     {doc.tags.length > 0 && (
@@ -618,19 +619,34 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
           <Card>
             <CardHeader><CardTitle>{t('metadata')}</CardTitle></CardHeader>
             <CardBody className="space-y-3">
-              {Object.entries(doc.metadata).length === 0 ? (
-                <p className="text-sm text-neutral-400">{t('noDocuments')}</p>
-              ) : (
-                Object.entries(doc.metadata).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between border-b border-neutral-50 pb-2">
-                    <span className="text-sm text-neutral-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                    <span className="text-sm font-medium text-neutral-900">
-                      {typeof value === 'object' && value !== null
-                        ? Array.isArray(value) ? value.join(', ') : JSON.stringify(value)
-                        : String(value ?? '')}
-                    </span>
+              <div className="grid grid-cols-2 gap-3">
+                <InfoRow icon={<FileText className="h-3.5 w-3.5" />} label={t('documentType')} value={typeConfig[doc.type].label} />
+                <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={department?.name || '—'} />
+                <InfoRow icon={<UserIcon className="h-3.5 w-3.5" />} label={t('fullName')} value={doc.uploadedBy || '—'} />
+                <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label={t('uploadedAt')} value={formatDate(doc.uploadedAt)} />
+                <InfoRow icon={<Clock className="h-3.5 w-3.5" />} label={t('modifiedAt') || t('uploadedAt')} value={formatDate(doc.modifiedAt)} />
+                <InfoRow icon={<Tag className="h-3.5 w-3.5" />} label={t('version')} value={`v${doc.version}`} />
+                <InfoRow icon={<Activity className="h-3.5 w-3.5" />} label={t('status')} value={statusConfig[doc.status].label} />
+                <InfoRow icon={<Shield className="h-3.5 w-3.5" />} label={t('classification')} value={classificationConfig[doc.classification].label} />
+              </div>
+              {Object.keys(doc.metadata).length > 0 && (
+                <>
+                  <div className="pt-3 border-t border-neutral-100">
+                    <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('metadata')}</p>
+                    <div className="space-y-2">
+                      {Object.entries(doc.metadata).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between border-b border-neutral-50 pb-2">
+                          <span className="text-sm text-neutral-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                          <span className="text-sm font-medium text-neutral-900">
+                            {typeof value === 'object' && value !== null
+                              ? Array.isArray(value) ? value.join(', ') : JSON.stringify(value)
+                              : String(value ?? '')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))
+                </>
               )}
               {doc.insight && (
                 <>

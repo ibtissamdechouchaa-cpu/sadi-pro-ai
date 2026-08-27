@@ -55,6 +55,33 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const [legalRefs, setLegalRefs] = useState<any[]>([]);
   const [loadingLegalRefs, setLoadingLegalRefs] = useState(false);
   const [disposals, setDisposals] = useState<any[]>([]);
+
+  const legalTranslations: Record<string, { title: string; description: string; subject: string }> = {
+    'Loi 98-05': { title: 'القانون 98-05 المؤرخ في 25 يونيو 1998 المتعلق بالأرشيف', description: 'القانون الأساسي المنظم للأرشيف في الجزائر. يُحدد تصنيف الوثائق وشروط الوصول وآجال الاحتفاظ بها.', subject: 'تنظيم الأرشيف' },
+    'Loi 98-04': { title: 'القانون 98-04 المؤرخ في 15 يونيو 1998 المتعلق بحماية التراث الثقافي', description: 'يحسم حماية التراث الثقافي والتاريخي. الأساس لمعالجة الوثائق ذات القيمة التاريخية والتراثية.', subject: 'التراث الثقافي' },
+    'Loi 90-30': { title: 'القانون 90-30 المؤرخ في 1 ديسمبر 1990 المتعلق بالمجالس الوطنية', description: 'ينظم حماية الممتلكات والمجالس الوطنية. الأساس للحفاظ على الوثائق المثبتة لحقوق وممتلكات الدولة.', subject: 'المجالس الوطنية' },
+    'Loi 15-05': { title: 'القانون 15-05 المؤرخ في 16 فبراير 2015 المتعلق بالجريمة الإلكترونية', description: 'يكمل مكافحة الجريمة الإلكترونية وحماية الأنظمة والبيانات الرقمية.', subject: 'الجريمة الإلكترونية' },
+    'Loi 09-04': { title: 'القانون 09-04 المؤرخ في 5 أغسطس 2009 المتعلق بمكافحة جرائم تكنولوجيا المعلومات', description: 'القانون الجزائري الأول لمكافحة الجرائم المعلوماتية. أساس أمن أنظمة الأرشيف.', subject: 'جرائم تكنولوجيا المعلومات' },
+    'Loi 18-07': { title: 'القانون 18-07 المتعلق بالحماية العامة لبيانات شخصية طبيعة', description: 'ينظم حماية البيانات الشخصية ويحمي خصوصية الأفراد في التعامل مع المعلومات.', subject: 'حماية البيانات الشخصية' },
+    'Loi 04-19': { title: 'القانون 04-19 المتعلق بال信息安全 العام', description: 'ينظم الأمن المعلوماتي ويحمي الأنظمة والشبكات والبيانات من المخاطر الإلكترونية.', subject: 'الأمن المعلوماتي' },
+    'Circulaire 2': { title: 'المنشور رقم 2 المتعلق بإجراءات الأرشيف()', description: 'منشور يُفصّل إجراءات الأرشيف والتصنيف وإزالة الوثائق الإدارية.', subject: 'إجراءات الأرشيف' },
+    'Circulaire 22': { title: 'المنشور رقم 22 المؤرخ في 16 يوليو 2001 المتعلق بالقوائم الشاملة للوثائق الأرشيفية', description: 'يُعدّل القوائم الشاملة للوثائق الأرشيفية التي يجب على الجهات العامة إنشاؤها.', subject: 'القوائم الشاملة للأرشيف' },
+    'Circulaire 23': { title: 'المنشور رقم 23 المؤرخ في 1 يوليو 2003 المتعلق ببطاقة تشخيص الأرشيف', description: 'يُنشئ بطاقة تشخيص لتقييم حالة الأرشيف ومحفات الحفظ.', subject: 'بطاقة تشخيص الأرشيف' },
+    'Circulaire 26': { title: 'المنشور رقم 26 المؤرخ في يوليو 2007 المتعلق بالتواصل مع الأرشيف', description: 'ينظم التواصل والاستفسار عن الأرشيف، بما في ذلك المواعيد النهائية وشروط الوصول.', subject: 'التواصل مع الأرشيف' },
+    'Circulaire 29': { title: 'المنشور رقم 29 المؤرخ في 27 أكتوبر 2008 المتعلق باعتماد شركات الأرشيف الخاصة', description: 'يُحدد شروط الاعتماد والرقابة على مزودي خيام الأرشيف الخاصة.', subject: 'اعتماد شركات الأرشيف الخاصة' },
+    'Décision 10/06/1991': { title: 'قرار 10 يونيو 1991 المتعلق بتنظيم الأرشيف الوطني', description: 'القرار التأسيسي المنظم للأرشيف الوطني وآجال الجمع والحفظ.', subject: 'تنظيم الأرشيف الوطني' },
+    'Arrêté interministériel 20/02/2012': { title: 'المرسوم الوزاري المشترك 20 فبراير 2012 المحدد لآجال حفظ الوثائق الإدارية', description: 'يُحدد آجال الحفظ والأحوال النهائية للوثائق الإدارية الحالية.', subject: 'آجال الحفظ' },
+    'Arrêté interministériel 07/10/2014': { title: 'المرسوم الوزاري المشترك 7 أكتوبر 2014 المتعلق بالتوثيق والأرشيف الإلكتروني', description: 'يُحدد معايير التوثيق والتوثيق والأرشيف الإلكتروني.', subject: 'التوثيق والأرشيف الإلكتروني' },
+    'Arrêté interministériel 08/05/2016': { title: 'المرسوم الوزاري المشترك 8 مايو 2016 المتعلق بجداول إدارة الأرشيف', description: 'يُنشئ جداول الإدارة حسب القطاع وقواعد التصنيف والإزالة.', subject: 'جداول إدارة الأرشيف' },
+    'Arrêté interministériel 15/03/2023': { title: 'المرسوم الوزاري المشترك 15 مارس 2023 المُحدّث لآجال الحفظ والتحويل إلى الأرشيف التاريخي', description: 'يُحدّث الآجال ويُحدد آجال التحويل إلى الأرشيف التاريخي.', subject: ' تحديث آجال الحفظ والتحويل' },
+  };
+
+  const getLocalizedRef = (ref: any) => {
+    if (locale === 'ar' && legalTranslations[ref.referenceNumber]) {
+      return { ...ref, title: legalTranslations[ref.referenceNumber].title, description: legalTranslations[ref.referenceNumber].description, subject: legalTranslations[ref.referenceNumber].subject };
+    }
+    return ref;
+  };
   const loadDisposals = useCallback(async () => {
     try { const d = await api.get('/api/data/disposal-requests') as { requests: any[] }; setDisposals(d.requests || []); } catch {}
   }, []);
@@ -395,18 +422,20 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                 <EmptyState icon={<FileText className="h-8 w-8" />} title={t('noDocuments')} description={t('noDocuments')} />
               ) : (
                 <div className="space-y-3">
-                  {legalRefs.map((ref) => (
+                  {legalRefs.map((ref) => {
+                    const lr = getLocalizedRef(ref);
+                    return (
                     <div key={ref.id} className="border border-neutral-200 rounded-lg p-4 hover:bg-neutral-50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <Badge variant={ref.referenceType === 'law' ? 'primary' : ref.referenceType === 'circular' ? 'warning' : 'success'}>
-                              {ref.referenceType === 'law' ? (t('legal') === 'القانوني' ? 'قانون' : t('legal')) : ref.referenceType === 'circular' ? (locale === 'ar' ? 'منشور' : t('compliance') === 'الامتثال' ? 'منشور' : 'Circulaire') : (locale === 'ar' ? 'قرار' : 'Décision')}
+                              {ref.referenceType === 'law' ? (locale === 'ar' ? 'قانون' : t('legal')) : ref.referenceType === 'circular' ? (locale === 'ar' ? 'منشور' : 'Circulaire') : (locale === 'ar' ? 'قرار' : 'Décision')}
                             </Badge>
                             <span className="text-xs text-neutral-500">{ref.referenceNumber}</span>
                           </div>
-                          <h3 className="text-sm font-semibold text-neutral-900 mt-2">{ref.title}</h3>
-                          {ref.description && <p className="text-xs text-neutral-600 mt-1">{ref.description}</p>}
+                          <h3 className="text-sm font-semibold text-neutral-900 mt-2">{lr.title}</h3>
+                          {lr.description && <p className="text-xs text-neutral-600 mt-1">{lr.description}</p>}
                           <div className="flex flex-wrap gap-2 mt-2">
                             {ref.retentionRules?.minYears && (
                               <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
@@ -420,7 +449,8 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardBody>
@@ -432,22 +462,22 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
         <div className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('disposalQueue')} — Pending Disposal → Approval → Final</CardTitle>
-              <Button variant="outline" size="sm" onClick={loadDisposals}>Refresh</Button>
+              <CardTitle>{t('disposalQueue')}</CardTitle>
+              <Button variant="outline" size="sm" onClick={loadDisposals}>{t('refresh')}</Button>
             </CardHeader>
             <CardBody className="p-0">
-              {disposals.length === 0 ? <div className="text-center py-12 text-sm text-neutral-500">No disposal requests — documents in PENDING_DISPOSAL will appear here. Deletion is not direct, requires approval and audit.</div> : (
+              {disposals.length === 0 ? <div className="text-center py-12 text-sm text-neutral-500">{t('noDocuments')}</div> : (
                 <div className="divide-y divide-neutral-100">
                   {disposals.map((r: { id: string; documentId: string; status: string; reason: string; requestedByName: string; createdAt: string }) => (
                     <div key={r.id} className="flex items-center justify-between px-5 py-3">
                       <div>
                         <p className="text-sm font-medium text-neutral-900">{r.documentId.slice(0,8)}… <span className="text-xs text-neutral-500">{r.reason || '—'}</span></p>
-                        <p className="text-xs text-neutral-400">By {r.requestedByName} · {formatDate(r.createdAt)} · {r.status}</p>
+                        <p className="text-xs text-neutral-400">{t('by')} {r.requestedByName} · {formatDate(r.createdAt)} · {r.status}</p>
                       </div>
                       {r.status === 'pending' && (
                         <div className="flex gap-1">
-                          <Button size="sm" onClick={async()=>{ await api.patch(`/api/data/disposal-requests/${r.id}/approve`, {action:'approve'}); toast('success','Approved — disposed'); loadDisposals(); }}>Approve</Button>
-                          <Button size="sm" variant="outline" onClick={async()=>{ await api.patch(`/api/data/disposal-requests/${r.id}/approve`, {action:'reject'}); toast('success','Rejected'); loadDisposals(); }}>Reject</Button>
+                          <Button size="sm" onClick={async()=>{ await api.patch(`/api/data/disposal-requests/${r.id}/approve`, {action:'approve'}); toast('success', t('approve')); loadDisposals(); }}>{t('approve')}</Button>
+                          <Button size="sm" variant="outline" onClick={async()=>{ await api.patch(`/api/data/disposal-requests/${r.id}/approve`, {action:'reject'}); toast('success', t('reject')); loadDisposals(); }}>{t('reject')}</Button>
                         </div>
                       )}
                       {r.status !== 'pending' && <Badge variant={r.status==='approved'?'success':'neutral'}>{r.status}</Badge>}

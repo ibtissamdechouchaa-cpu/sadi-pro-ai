@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 interface Wf { id: string; name: string; description: string | null; triggerType: string; isActive: boolean; createdAt: string; }
 
 export function WorkflowsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { toast } = useToast();
   const [items, setItems] = useState<Wf[]>([]);
   const [name, setName] = useState('');

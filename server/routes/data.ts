@@ -2119,9 +2119,14 @@ data.post("/payment/confirm", async (c) => {
   const { paymentId, planTier } = await c.req.json<{ paymentId: string; planTier: string }>();
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) return c.json({ error: "Org not found" }, 404);
+
+  // Block demo mode — require real CHARGILY_API_KEY for payment confirmation
+  if (!process.env.CHARGILY_API_KEY) {
+    return c.json({ error: "Payment gateway not configured. Set CHARGILY_API_KEY to enable payments.", demoBlocked: true }, 400);
+  }
+
   const planTierValid = ["starter","business","professional","enterprise"].includes(planTier) ? planTier : "starter";
   const { getPlanByTier } = await import("../../src/lib/billing.js");
-  // Fallback if import fails, use static
   const limits: Record<string, { maxStorageBytes: bigint; maxDocuments: number; maxUsers: number }> = {
     starter: { maxStorageBytes: BigInt(209715200), maxDocuments: 500, maxUsers: 5 },
     business: { maxStorageBytes: BigInt(10737418240), maxDocuments: 5000, maxUsers: 15 },
@@ -2131,7 +2136,7 @@ data.post("/payment/confirm", async (c) => {
   const lim = limits[planTierValid] || limits.starter;
   await prisma.organization.update({ where: { id: orgId }, data: { planTier: planTierValid, maxStorageBytes: lim.maxStorageBytes, maxDocuments: lim.maxDocuments, maxUsers: lim.maxUsers, subscriptionState: "active" } });
   await prisma.auditLog.create({ data: { organizationId: orgId, userId, action: "PAYMENT_CONFIRMED", resourceType: "payment", resourceId: paymentId, metadata: { planTier: planTierValid } } });
-  await prisma.notification.create({ data: { organizationId: orgId, userId, type: "success", title: "Paiement confirmé", message: `Plan ${planTierValid} activé — ${new Intl.NumberFormat('fr-DZ').format(Number(lim.maxStorageBytes)/1024/1024/1024)} GB, ${lim.maxDocuments} docs` } });
+  await prisma.notification.create({ data: { organizationId: orgId, userId, type: "success", title: "Subscription activated", message: `Plan ${planTierValid} activated — ${new Intl.NumberFormat('en-US').format(Number(lim.maxStorageBytes)/1024/1024/1024)} GB, ${lim.maxDocuments} docs` } });
   return c.json({ ok: true, planTier: planTierValid });
 });
 

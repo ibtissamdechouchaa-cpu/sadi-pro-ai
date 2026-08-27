@@ -107,9 +107,16 @@ type TranslationKeys = {
   trialExpiredDesc: string;
   trialDesc: string;
   subscribe: string;
+  paymentTitle: string;
+  paymentGatewayDesc: string;
+  paymentDemoMode: string;
+  paymentOpenGateway: string;
+  paymentInvoiceInfo: string;
+  paymentClose: string;
 
   // Messages
   noDocuments: string;
+  noMetadata: string;
   noSearchResults: string;
   uploadSuccess: string;
   processingStarted: string;
@@ -322,8 +329,11 @@ type TranslationKeys = {
   confidence: string;
   applicableRule: string;
   accept: string;
+  approve: string;
   modify: string;
   reject: string;
+  refresh: string;
+  by: string;
   traceability: string;
   electronicSignature: string;
   addSigner: string;
@@ -484,8 +494,15 @@ const translations: Record<Locale, TranslationKeys> = {
     trialExpiredDesc: 'Your free trial has ended. Subscribe to continue uploading documents.',
     trialDesc: 'Starter plan features. Upgrade anytime for more storage and users.',
     subscribe: 'Subscribe',
+    paymentTitle: 'Payment',
+    paymentGatewayDesc: 'Algerian gateway: Chargily Pay / SATIM — DZD — CIB / Edahabia / BaridiMob + Wire Transfer',
+    paymentDemoMode: 'Demo mode (no CHARGILY_API_KEY set). Payment simulation only — no real charge.',
+    paymentOpenGateway: 'Open Chargily',
+    paymentInvoiceInfo: 'NIF/NIS/RC on PDF invoice • VAT 19% included • Instant receipt • Support: contact@sadi.pro',
+    paymentClose: 'Close',
 
     noDocuments: 'No documents yet',
+    noMetadata: 'No metadata available',
     noSearchResults: 'No search results found',
     uploadSuccess: 'Documents uploaded successfully',
     processingStarted: 'Processing started',
@@ -689,8 +706,11 @@ const translations: Record<Locale, TranslationKeys> = {
     confidence: 'Confidence',
     applicableRule: 'Applicable Rule',
     accept: 'Accept',
+    approve: 'Approve',
     modify: 'Modify',
     reject: 'Reject',
+    refresh: 'Refresh',
+    by: 'By',
     traceability: 'Traceability',
     electronicSignature: 'Electronic Signature',
     addSigner: 'Add Signer',
@@ -850,8 +870,15 @@ const translations: Record<Locale, TranslationKeys> = {
     trialExpiredDesc: 'انتهت فترة التجربة المجانية. اشترك لمتابعة رفع الوثائق.',
     trialDesc: 'ميزات خطة Starter. قم بالترقية في أي وقت لمزيد من التخزين والمستخدمين.',
     subscribe: 'اشترك',
+    paymentTitle: 'الدفع',
+    paymentGatewayDesc: 'بوابة جزائرية: Chargily Pay / SATIM — دج — CIB /חקabia / BaridiMob + تحويل بنكي',
+    paymentDemoMode: 'وضع تجريبي (لا يوجد CHARGILY_API_KEY). محاكاة الدفع فقط — لا يوجد خصم حقيقي.',
+    paymentOpenGateway: 'فتح Chargily',
+    paymentInvoiceInfo: 'NIF/NIS/RC على فاتورة PDF • ضريبة القيمة المضافة 19% مشمولة • إيصال فوري • الدعم: contact@sadi.pro',
+    paymentClose: 'إغلاق',
 
     noDocuments: 'لا توجد وثائق بعد',
+    noMetadata: 'لا توجد بيانات وصفية',
     noSearchResults: 'لم يتم العثور على نتائج',
     uploadSuccess: 'تم رفع الوثائق بنجاح',
     processingStarted: 'بدأت المعالجة',
@@ -1055,8 +1082,11 @@ const translations: Record<Locale, TranslationKeys> = {
     confidence: 'الثقة',
     applicableRule: 'القاعدة المطبقة',
     accept: 'قبول',
+    approve: 'موافقة',
     modify: 'تعديل',
     reject: 'رفض',
+    refresh: 'تحديث',
+    by: 'بواسطة',
     traceability: 'التتبع',
     electronicSignature: 'التوقيع الإلكتروني',
     addSigner: 'إضافة موقع',
@@ -1216,8 +1246,15 @@ const translations: Record<Locale, TranslationKeys> = {
     trialExpiredDesc: 'Votre essai gratuit est terminé. Abonnez-vous pour continuer à téléverser des documents.',
     trialDesc: 'Fonctionnalités du plan Starter. Passez à niveau à tout moment pour plus de stockage et d\'utilisateurs.',
     subscribe: 'S\'abonner',
+    paymentTitle: 'Paiement',
+    paymentGatewayDesc: 'Gateway algérien: Chargily Pay / SATIM — DZD — CIB / Edahabia / BaridiMob + Virement',
+    paymentDemoMode: 'Mode démo (sans CHARGILY_API_KEY) — simulation de paiement uniquement, pas de débit réel.',
+    paymentOpenGateway: 'Ouvrir Chargily',
+    paymentInvoiceInfo: 'NIF/NIS/RC sur facture PDF • TVA 19% incluse • Reçu instantané • Support: contact@sadi.pro',
+    paymentClose: 'Fermer',
 
     noDocuments: 'Aucun document pour le moment',
+    noMetadata: 'Aucune métadonnée disponible',
     noSearchResults: 'Aucun résultat trouvé',
     uploadSuccess: 'Documents téléversés avec succès',
     processingStarted: 'Traitement démarré',
@@ -1421,8 +1458,11 @@ const translations: Record<Locale, TranslationKeys> = {
     confidence: 'Confiance',
     applicableRule: 'Règle applicable',
     accept: 'Accepter',
+    approve: 'Approuver',
     modify: 'Modifier',
     reject: 'Rejeter',
+    refresh: 'Actualiser',
+    by: 'Par',
     traceability: 'Traçabilité',
     electronicSignature: 'Signature électronique',
     addSigner: 'Ajouter signataire',

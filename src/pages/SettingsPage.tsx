@@ -649,9 +649,9 @@ export function SettingsPage() {
       {showPayment && payment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-lg font-bold text-neutral-900">Paiement — {payment.planTier} — {new Intl.NumberFormat('fr-DZ').format(payment.amount)} DZD</h2>
-            <p className="text-xs text-neutral-500 mt-1">Gateway algérien: <strong>Chargily Pay / SATIM</strong> — DZD — CIB / Edahabia / BaridiMob + Virement</p>
-            {payment.isMock && <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded">Mode démo (sans CHARGILY_API_KEY) — cliquez une méthode pour simuler le paiement et activer le plan.</p>}
+            <h2 className="text-lg font-bold text-neutral-900">{t('paymentTitle')} — {payment.planTier} — {new Intl.NumberFormat(locale === 'ar' ? 'ar-DZ' : 'fr-DZ').format(payment.amount)} DZD</h2>
+            <p className="text-xs text-neutral-500 mt-1">{t('paymentGatewayDesc')}</p>
+            {payment.isMock && <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded">{t('paymentDemoMode')}</p>}
             <div className="mt-4 grid grid-cols-3 gap-2">
               {(['CIB','Edahabia','BaridiMob'] as const).map((m) => (
                 <button key={m} onClick={() => handleConfirmPayment(m)} className="rounded-xl border-2 border-primary-200 bg-primary-50 p-4 text-center hover:border-primary-500 hover:bg-primary-100 transition-colors">
@@ -660,10 +660,10 @@ export function SettingsPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-neutral-400 mt-3">NIF/NIS/RC sur facture PDF • TVA 19% incluse • Reçu instantané • Support: contact@sadi.pro</p>
+            <p className="text-[11px] text-neutral-400 mt-3">{t('paymentInvoiceInfo')}</p>
             <div className="mt-4 flex justify-between items-center">
-              <a href={payment.paymentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">Ouvrir Chargily →</a>
-              <Button variant="ghost" size="sm" onClick={() => { setShowPayment(false); setPayment(null); }}>{t('close')}</Button>
+              <a href={payment.paymentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">{t('paymentOpenGateway')} →</a>
+              <Button variant="ghost" size="sm" onClick={() => { setShowPayment(false); setPayment(null); }}>{t('paymentClose')}</Button>
             </div>
           </div>
         </div>

@@ -35,6 +35,7 @@ import {
   getStatusLabel,
   getTypeLabel,
   getClassificationLabel,
+  getLanguageLabel,
   formatBytes,
   timeAgo,
   cn,
@@ -435,7 +436,7 @@ export function DocumentsPage({ onOpenDocument }: DocumentsPageProps) {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-neutral-900 truncate flex items-center gap-1.5">
                             {doc.title}
-                            {doc.language !== 'unknown' && <span className="ml-1 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600">{doc.language.toUpperCase()}</span>}
+                            {doc.language !== 'unknown' && <span className="ml-1 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600">{getLanguageLabel(doc.language, t)}</span>}
                             {doc.legalHold && <Shield className="h-3.5 w-3.5 text-error-500 shrink-0" />}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
