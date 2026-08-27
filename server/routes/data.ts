@@ -10,7 +10,11 @@ import { generateInvoicePdf } from "../lib/invoice.js";
 
 const data = new Hono();
 
-data.use("*", authMiddleware);
+data.use("*", async (c, next) => {
+  // Public diagnostics — allow without token (also available as /api/r2-status in index.ts)
+  if (c.req.path.endsWith("/r2-status")) return next();
+  return authMiddleware(c, next);
+});
 
 
 
