@@ -70,6 +70,32 @@ app.get("/api/health", async (c) => {
   }
 });
 
+app.get("/api/r2-status", async (c) => {
+  c.header("Cache-Control", "no-store");
+  const endpointRaw = process.env.R2_ENDPOINT || "";
+  const bucket = process.env.R2_BUCKET || "";
+  const hasKey = Boolean(process.env.R2_ACCESS_KEY_ID);
+  const hasSecret = Boolean(process.env.R2_SECRET_ACCESS_KEY);
+  let endpointNormalized = endpointRaw.trim().replace(/\/+$/, "");
+  if (bucket && endpointNormalized.endsWith(`/${bucket}`)) endpointNormalized = endpointNormalized.slice(0, -(bucket.length + 1));
+  if (!bucket && endpointNormalized.endsWith("/sadi-pro-doc")) endpointNormalized = endpointNormalized.slice(0, -"/sadi-pro-doc".length);
+  const isConfigured = Boolean(endpointRaw && bucket && hasKey && hasSecret);
+  let probe: any = null;
+  if (isConfigured) {
+    try {
+      const { S3Client, ListObjectsV2Command } = await import("./lib/r2.js");
+      // Reuse raw import via aws-sdk
+      const { S3Client: S3 } = await import("@aws-sdk/client-s3");
+      const client = new S3({ region: "auto", endpoint: endpointNormalized, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID!, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY! } });
+      const res: any = await client.send(new (await import("@aws-sdk/client-s3")).ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
+      probe = { ok: true, keyCount: res.KeyCount ?? 0 };
+    } catch (e: any) {
+      probe = { ok: false, error: e?.message?.slice(0, 200) || String(e).slice(0,200) };
+    }
+  }
+  return c.json({ isR2Configured: isConfigured, hasEndpoint: Boolean(endpointRaw), endpointRaw, endpointNormalized, bucket, hasKey, hasSecret, probe, r2: isConfigured ? "configured" : "local-fallback" });
+});
+
 app.route("/api/auth", authRoutes);
 app.route("/api/data", dataRoutes);
 
