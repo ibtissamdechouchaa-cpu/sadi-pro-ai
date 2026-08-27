@@ -42,7 +42,7 @@ interface RetentionPolicy {
 }
 
 export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { documents, updateDocument, departments, refreshData } = useStore();
   const { toast } = useToast();
   const [tab, setTab] = useState<'records' | 'retention' | 'legal-hold' | 'frameworks' | 'legal-kb' | 'disposal'>('records');
@@ -157,8 +157,8 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
     { key: 'retention' as const, label: t('retentionPolicies'), icon: Clock },
     { key: 'legal-hold' as const, label: t('legalHolds'), icon: Shield },
     { key: 'frameworks' as const, label: t('compliance'), icon: Scale },
-    { key: 'legal-kb' as const, label: 'Base de données juridique', icon: FileText },
-    { key: 'disposal' as const, label: 'Disposal Queue', icon: Trash2 },
+    { key: 'legal-kb' as const, label: t('legalKnowledgeBase'), icon: FileText },
+    { key: 'disposal' as const, label: t('disposalQueue'), icon: Trash2 },
   ];
 
   return (
@@ -385,14 +385,14 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Base de Connaissances Juridique Algérienne</CardTitle>
-              <p className="text-sm text-neutral-500 mt-1">Lois, circulaires et décisions relatives à l'archivage et à la gestion documentaire en Algérie</p>
+              <CardTitle>{t('legalKnowledgeBase')} — Algérie</CardTitle>
+              <p className="text-sm text-neutral-500 mt-1">{t('legalKnowledgeBaseDesc')}</p>
             </CardHeader>
             <CardBody>
               {loadingLegalRefs ? (
-                <div className="text-center py-8 text-neutral-500">Chargement...</div>
+                <div className="text-center py-8 text-neutral-500">{t('loading')}</div>
               ) : legalRefs.length === 0 ? (
-                <EmptyState icon={<FileText className="h-8 w-8" />} title="Aucune référence" description="Aucune référence juridique trouvée" />
+                <EmptyState icon={<FileText className="h-8 w-8" />} title={t('noDocuments')} description={t('noDocuments')} />
               ) : (
                 <div className="space-y-3">
                   {legalRefs.map((ref) => (
@@ -401,7 +401,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <Badge variant={ref.referenceType === 'law' ? 'primary' : ref.referenceType === 'circular' ? 'warning' : 'success'}>
-                              {ref.referenceType === 'law' ? 'Loi' : ref.referenceType === 'circular' ? 'Circulaire' : 'Décision'}
+                              {ref.referenceType === 'law' ? (t('legal') === 'القانوني' ? 'قانون' : t('legal')) : ref.referenceType === 'circular' ? (locale === 'ar' ? 'منشور' : t('compliance') === 'الامتثال' ? 'منشور' : 'Circulaire') : (locale === 'ar' ? 'قرار' : 'Décision')}
                             </Badge>
                             <span className="text-xs text-neutral-500">{ref.referenceNumber}</span>
                           </div>
@@ -410,7 +410,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                           <div className="flex flex-wrap gap-2 mt-2">
                             {ref.retentionRules?.minYears && (
                               <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
-                                Rétention: {ref.retentionRules.minYears}-{ref.retentionRules.maxYears || ref.retentionRules.minYears} ans
+                                {t('retention')}: {ref.retentionRules.minYears}-{ref.retentionRules.maxYears || ref.retentionRules.minYears} {locale==='ar'?'سنوات':locale==='fr'?'ans':'years'}
                               </span>
                             )}
                             {ref.retentionRules?.documentTypes?.slice(0, 3).map((dt: string) => (

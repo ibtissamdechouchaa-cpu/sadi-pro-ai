@@ -73,22 +73,22 @@ export function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600"><AlertTriangle className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.filter((e)=>e.pri.label==='CRITICAL').length}</p><p className="text-xs text-neutral-500">Critical</p></div></CardBody></Card>
-        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-600"><Clock className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.filter((e)=>e.daysLeft<=7 && e.daysLeft>0).length}</p><p className="text-xs text-neutral-500">≤7 days</p></div></CardBody></Card>
-        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-50 text-warning-600"><Shield className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.filter((e)=>['confidential','restricted','highly_confidential'].includes(e.classification)).length}</p><p className="text-xs text-neutral-500">Confidential</p></div></CardBody></Card>
-        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600"><Archive className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.length}</p><p className="text-xs text-neutral-500">Total expiring</p></div></CardBody></Card>
+        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600"><AlertTriangle className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.filter((e)=>e.pri.label==='CRITICAL').length}</p><p className="text-xs text-neutral-500">{t('critical')}</p></div></CardBody></Card>
+        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-600"><Clock className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.filter((e)=>e.daysLeft<=7 && e.daysLeft>0).length}</p><p className="text-xs text-neutral-500">≤7 {t('days')}</p></div></CardBody></Card>
+        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-warning-50 text-warning-600"><Shield className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.filter((e)=>['confidential','restricted','highly_confidential'].includes(e.classification)).length}</p><p className="text-xs text-neutral-500">{t('classificationConfidential')}</p></div></CardBody></Card>
+        <Card><CardBody className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600"><Archive className="h-4 w-4" /></div><div><p className="text-xl font-bold">{enriched.length}</p><p className="text-xs text-neutral-500">{t('totalExpiring')}</p></div></CardBody></Card>
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Expiring Documents — Priority Sorted</CardTitle>
+            <CardTitle>{t('expiringDocs')} — {t('priority')}</CardTitle>
             <div className="flex gap-2 mt-2">
-              <select value={filterType} onChange={(e)=> setFilterType(e.target.value)} className="h-8 rounded border border-neutral-200 px-2 text-xs"><option value="all">All types</option><option value="contract">Contract</option><option value="legal">Legal</option><option value="invoice">Invoice</option><option value="report">Report</option></select>
-              <select value={filterPriority} onChange={(e)=> setFilterPriority(e.target.value)} className="h-8 rounded border border-neutral-200 px-2 text-xs"><option value="all">All priority</option><option value="CRITICAL">CRITICAL</option><option value="HIGH">HIGH</option><option value="MEDIUM">MEDIUM</option><option value="LOW">LOW</option></select>
+              <select value={filterType} onChange={(e)=> setFilterType(e.target.value)} className="h-8 rounded border border-neutral-200 px-2 text-xs"><option value="all">{t('allTypes')}</option><option value="contract">{t('typeContract')}</option><option value="legal">{t('typeLegal')}</option><option value="invoice">{t('typeInvoice')}</option><option value="report">{t('typeReport')}</option></select>
+              <select value={filterPriority} onChange={(e)=> setFilterPriority(e.target.value)} className="h-8 rounded border border-neutral-200 px-2 text-xs"><option value="all">{t('allPriority')}</option><option value="CRITICAL">{t('critical')}</option><option value="HIGH">{t('high')}</option><option value="MEDIUM">{t('medium')}</option><option value="LOW">{t('low')}</option></select>
             </div>
           </div>
-          <Badge variant="warning">{enriched.length} documents</Badge>
+          <Badge variant="warning">{enriched.length} {t('documents')}</Badge>
         </CardHeader>
         <CardBody className="p-0">
           {loading ? <p className="text-sm text-neutral-400 text-center py-8">Loading...</p> : enriched.length === 0 ? (
@@ -98,14 +98,14 @@ export function ReportsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 text-xs text-neutral-500">
                   <tr>
-                    <th className="text-left px-4 py-2 font-medium">Document</th>
-                    <th className="text-left px-3 py-2 font-medium">Category</th>
-                    <th className="text-left px-3 py-2 font-medium">Owner</th>
-                    <th className="text-left px-3 py-2 font-medium">Retention</th>
-                    <th className="text-left px-3 py-2 font-medium">Expiration</th>
-                    <th className="text-left px-3 py-2 font-medium">Days</th>
-                    <th className="text-left px-3 py-2 font-medium">Priority</th>
-                    <th className="text-left px-3 py-2 font-medium">Recommended Action</th>
+                    <th className="text-left px-4 py-2 font-medium">{t('document')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('category')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('owner')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('retention')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('expiration')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('days')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('priority')}</th>
+                    <th className="text-left px-3 py-2 font-medium">{t('recommendedAction')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">

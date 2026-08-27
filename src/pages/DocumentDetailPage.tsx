@@ -59,7 +59,7 @@ interface DocumentDetailPageProps {
 type Tab = 'overview' | 'metadata' | 'insights' | 'versions' | 'activity' | 'permissions' | 'retention' | 'signatures' | 'translate';
 
 export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: DocumentDetailPageProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { documents, departments, users, updateDocument, deleteDocument, refreshData } = useStore();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('overview');
@@ -250,11 +250,11 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
               <CardBody className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-lg border border-neutral-200 p-4">
-                    <p className="text-sm font-medium text-neutral-700">Durée de rétention</p>
-                    <p className="text-2xl font-bold text-neutral-900 mt-1">{doc.retentionYears || 'Non définie'} ans</p>
+                    <p className="text-sm font-medium text-neutral-700">{t('retention')}</p>
+                    <p className="text-2xl font-bold text-neutral-900 mt-1">{doc.retentionYears ? `${doc.retentionYears} ${locale==='ar'?'سنوات':locale==='fr'?'ans':'years'}` : (locale==='ar'?'غير محددة':locale==='fr'?'Non définie':'Not defined')}</p>
                   </div>
                   <div className="rounded-lg border border-neutral-200 p-4">
-                    <p className="text-sm font-medium text-neutral-700">Expire le</p>
+                    <p className="text-sm font-medium text-neutral-700">{t('expiration')}</p>
                     <p className="text-2xl font-bold text-neutral-900 mt-1">{doc.expiresAt ? formatDate(doc.expiresAt) : 'N/A'}</p>
                   </div>
                 </div>
@@ -273,43 +273,43 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     }}
                     disabled={loadingRetention}
                   >
-                    {loadingRetention ? 'Analyse...' : 'Suggestion IA'}
+                    {loadingRetention ? t('loading') : t('retentionSuggestion')}
                   </Button>
                 </div>
 
                 {retentionSuggestion && (
                   <div className="rounded-lg border border-primary-200 bg-primary-50/30 p-4 space-y-3">
-                    <p className="text-sm font-medium text-primary-900">Suggestion IA</p>
+                    <p className="text-sm font-medium text-primary-900">{t('retentionSuggestion')}</p>
                     <p className="text-sm text-primary-700 mt-1">{retentionSuggestion.reason}</p>
-                    <p className="text-xs text-primary-600">Rétention suggérée: {retentionSuggestion.retentionYears} ans | Confiance: {Math.round((retentionSuggestion.confidence || 0) * 100)}% | Règle: {retentionSuggestion.applicableRule || '—'} | Action: {retentionSuggestion.action || '—'}</p>
+                    <p className="text-xs text-primary-600">{t('retention')}: {retentionSuggestion.retentionYears} {locale==='ar'?'سنوات':locale==='fr'?'ans':'years'} | {t('confidence')}: {Math.round((retentionSuggestion.confidence || 0) * 100)}% | {t('applicableRule')}: {retentionSuggestion.applicableRule || '—'} | {t('recommendedAction')}: {retentionSuggestion.action || '—'}</p>
                     <div className="flex flex-wrap gap-2 pt-2">
                       <Button size="sm" onClick={async () => {
-                        try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: retentionSuggestion.retentionYears, reason: `Accepted AI suggestion: ${retentionSuggestion.reason}` }); toast('success','Retention accepted'); await refreshData(); } catch { toast('error', t('error')); }
-                      }}>Accept</Button>
+                        try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: retentionSuggestion.retentionYears, reason: `Accepted AI suggestion: ${retentionSuggestion.reason}` }); toast('success', t('accept')); await refreshData(); } catch { toast('error', t('error')); }
+                      }}>{t('accept')}</Button>
                       <Button variant="outline" size="sm" onClick={async () => {
-                        const v = prompt('Modify retention years:', String(retentionSuggestion.retentionYears));
+                        const v = prompt(locale==='ar'?'تعديل سنوات الاحتفاظ:':locale==='fr'?'Modifier retention:':'Modify retention years:', String(retentionSuggestion.retentionYears));
                         if (!v) return;
-                        try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: Number(v), reason: 'Modified by user' }); toast('success','Modified'); await refreshData(); } catch { toast('error', t('error')); }
-                      }}>Modify</Button>
+                        try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: Number(v), reason: 'Modified by user' }); toast('success', t('modify')); await refreshData(); } catch { toast('error', t('error')); }
+                      }}>{t('modify')}</Button>
                       <Button variant="ghost" size="sm" onClick={async () => {
-                        try { await api.post('/api/data/compliance-check/' + doc.id, {}); toast('success','Rejected — logged'); await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: doc.retentionYears || 5, reason: 'Rejected AI, kept current' }); } catch { toast('error', t('error')); }
-                      }}>Reject</Button>
+                        try { await api.post('/api/data/compliance-check/' + doc.id, {}); toast('success', t('reject')); await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: doc.retentionYears || 5, reason: 'Rejected AI, kept current' }); } catch { toast('error', t('error')); }
+                      }}>{t('reject')}</Button>
                       <Button variant="ghost" size="sm" onClick={async () => {
-                        try { const r = await api.post(`/api/data/compliance-check/${doc.id}`) as { traceability: Array<{ referenceNumber: string; title: string }> }; toast('success', `Trace: ${r.traceability?.[0]?.referenceNumber || 'no ref'}`); } catch { toast('error', t('error')); }
-                      }}>View Traceability</Button>
+                        try { const r = await api.post(`/api/data/compliance-check/${doc.id}`) as { traceability: Array<{ referenceNumber: string; title: string }> }; toast('success', `${t('traceability')}: ${r.traceability?.[0]?.referenceNumber || '—'}`); } catch { toast('error', t('error')); }
+                      }}>{t('traceability')}</Button>
                     </div>
                   </div>
                 )}
                 <div className="rounded-lg border border-neutral-200 p-4">
-                  <p className="text-xs font-medium text-neutral-700 mb-2">Manual retention update</p>
+                  <p className="text-xs font-medium text-neutral-700 mb-2">{locale==='ar'?'تحديث يدوي':'Mise à jour manuelle'}</p>
                   <div className="flex items-center gap-2">
-                    <input id="manualRet" type="number" placeholder="Years" className="h-9 w-24 rounded-lg border border-neutral-200 px-3 text-sm" defaultValue={doc.retentionYears ?? ''} />
+                    <input id="manualRet" type="number" placeholder={locale==='ar'?'سنوات':locale==='fr'?'Ans':'Years'} className="h-9 w-24 rounded-lg border border-neutral-200 px-3 text-sm" defaultValue={doc.retentionYears ?? ''} />
                     <Button size="sm" variant="outline" onClick={async () => {
                       const el = document.getElementById('manualRet') as HTMLInputElement;
                       const v = Number(el.value);
                       if (!v) return;
-                      try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: v, reason: 'Manual update' }); toast('success','Updated'); await refreshData(); } catch { toast('error', t('error')); }
-                    }}>Apply</Button>
+                      try { await api.patch(`/api/data/documents/${doc.id}/retention`, { retentionYears: v, reason: 'Manual update' }); toast('success', t('save')); await refreshData(); } catch { toast('error', t('error')); }
+                    }}>{t('save')}</Button>
                   </div>
                 </div>
               </CardBody>

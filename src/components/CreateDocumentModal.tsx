@@ -77,24 +77,39 @@ export function CreateDocumentModal({ open, onClose, onCreated }: Props) {
       let filePath: string | null = null;
       let fileType: string | null = null;
       let fileSize: number | null = null;
+      // Try upload file OR editor HTML — but NEVER block draft save if upload fails (e.g. R2 Bucket missing on Render)
       if (file) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const up = await api.upload('/api/data/upload', fd) as { filePath: string; type?: string; size?: number };
-        filePath = up.filePath;
-        fileType = file.name.split('.').pop()?.toLowerCase() || null;
-        fileSize = file.size;
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          const up = await api.upload('/api/data/upload', fd) as { filePath: string; type?: string; size?: number };
+          filePath = up.filePath;
+          fileType = file.name.split('.').pop()?.toLowerCase() || null;
+          fileSize = file.size;
+        } catch (e) {
+          console.warn('Upload failed, will save draft without file:', e);
+          toast('warning', locale==='ar'?'فشل الرفع، سيتم الحفظ بدون ملف — عالجنا الخطأ':'Upload failed, saving without file');
+          fileType = file.name.split('.').pop()?.toLowerCase() || null;
+          fileSize = file.size;
+          // keep filePath null so document still saves as metadata+editorHtml
+        }
       } else if (editorHtml && editorHtml.replace(/<[^>]*>/g,'').trim().length > 10) {
-        // Word-like editor content → create HTML file (pixel-perfect like Word)
-        const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${form.title.trim()}</title><style>body{font-family:Calibri,Arial,sans-serif;line-height:1.6;max-width:800px;margin:40px auto;padding:20px;color:#111}h1{font-size:24px}h2{font-size:18px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:8px}</style></head><body>${editorHtml}</body></html>`;
-        const blob = new Blob([htmlDoc], { type: 'text/html' });
-        const htmlFile = new File([blob], `${(form.title.trim().replace(/[^a-zA-Z0-9\u0600-\u06FF]/g,'_') || 'document')}.html`, { type: 'text/html' });
-        const fd = new FormData();
-        fd.append('file', htmlFile);
-        const up = await api.upload('/api/data/upload', fd) as { filePath: string };
-        filePath = up.filePath;
-        fileType = 'html';
-        fileSize = blob.size;
+        try {
+          const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${form.title.trim()}</title><style>body{font-family:Calibri,Arial,sans-serif;line-height:1.6;max-width:800px;margin:40px auto;padding:20px;color:#111}h1{font-size:24px}h2{font-size:18px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:8px}</style></head><body>${editorHtml}</body></html>`;
+          const blob = new Blob([htmlDoc], { type: 'text/html' });
+          const htmlFile = new File([blob], `${(form.title.trim().replace(/[^a-zA-Z0-9\u0600-\u06FF]/g,'_') || 'document')}.html`, { type: 'text/html' });
+          const fd = new FormData();
+          fd.append('file', htmlFile);
+          const up = await api.upload('/api/data/upload', fd) as { filePath: string };
+          filePath = up.filePath;
+          fileType = 'html';
+          fileSize = blob.size;
+        } catch (e) {
+          console.warn('Editor upload failed, saving draft with metadata only:', e);
+          // still save — filePath stays null, editorHtml is in metadata
+          fileType = 'html';
+          fileSize = editorHtml.length;
+        }
       }
       const payload: Record<string, unknown> = {
         title: form.title.trim(),

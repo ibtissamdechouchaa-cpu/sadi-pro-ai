@@ -50,7 +50,7 @@ const rolePermissions: Record<RoleKey, string[]> = {
 };
 
 export function TeamPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { users, departments, refreshData } = useStore();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
@@ -283,16 +283,20 @@ export function TeamPage() {
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('email')}</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+              <Mail className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 ${document.documentElement.dir === 'rtl' ? 'right-3' : 'left-3'}`} />
               <input
+                dir="ltr"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('email')}
-                className="w-full h-10 rounded-lg border border-neutral-200 pl-10 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none transition-colors"
+                placeholder="name@example.com"
+                className={`w-full h-10 rounded-lg border border-neutral-200 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none transition-colors ${document.documentElement.dir === 'rtl' ? 'pr-10 pl-3 text-left' : 'pl-10 pr-3'}`}
                 autoFocus
               />
             </div>
+            <p className="text-[11px] text-neutral-400 mt-1">{email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? (locale === 'ar' ? 'أدخل بريدًا صحيحًا مثل name@example.com' : locale === 'fr' ? 'Entrez un email valide' : 'Enter a valid email') : ''}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">{t('team')}</label>

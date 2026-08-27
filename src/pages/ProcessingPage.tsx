@@ -71,6 +71,26 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
   const { jobs, documents, retryJob, cancelJob } = useStore();
   const [activeStage, setActiveStage] = useState<PipelineStage | null>(null);
 
+  const pipelineLabel = (s: PipelineStage) => {
+    const map: Record<string, string> = {
+      'Upload': t('pipelineUpload'),
+      'Virus Scan': t('pipelineVirusScan'),
+      'Validation': t('pipelineValidation'),
+      'Hash': t('pipelineHash'),
+      'Dedup': t('pipelineDedup'),
+      'OCR': t('pipelineOcr'),
+      'Text Extraction': t('pipelineTextExtraction'),
+      'Metadata': t('pipelineMetadata'),
+      'Classification': t('pipelineClassification'),
+      'Chunking': t('pipelineChunking'),
+      'Embedding': t('pipelineEmbedding'),
+      'Indexing': t('pipelineIndexing'),
+      'AI Analysis': t('pipelineAiAnalysis'),
+      'Ready': t('pipelineReady'),
+    };
+    return map[s] || s;
+  };
+
   const stageCounts = useMemo(() => {
     const m: Record<PipelineStage, number> = Object.fromEntries(PIPELINE.map((s) => [s, 0])) as Record<PipelineStage, number>;
     for (const j of jobs) m[stageOf(j)]++;
@@ -101,7 +121,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
         </div>
         {activeStage && (
           <Button variant="outline" size="sm" onClick={() => setActiveStage(null)}>
-            {t('close')} {t('filter')} — {activeStage} ({filteredJobs.length})
+            {t('close')} {t('filter')} — {pipelineLabel(activeStage)} ({filteredJobs.length})
           </Button>
         )}
       </div>
@@ -140,9 +160,9 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
                           ? 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100'
                           : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200',
                     )}
-                    title={`${count} ${t('documents')} ${stage}`}
+                    title={`${count} ${t('documents')} ${pipelineLabel(stage)}`}
                   >
-                    {stage}
+                    {pipelineLabel(stage)}
                     <span className={cn(
                       'inline-flex items-center justify-center min-w-5 h-5 rounded-full text-[10px] font-bold px-1',
                       isActive ? 'bg-white text-primary-600' : hasDocs ? 'bg-primary-600 text-white' : 'bg-neutral-300 text-neutral-600'
@@ -178,7 +198,7 @@ export function ProcessingPage({ onOpenDocument }: ProcessingPageProps) {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>{t('processingQueue')} {activeStage ? `— ${activeStage}` : ''}</CardTitle>
+            <CardTitle>{t('processingQueue')} {activeStage ? `— ${pipelineLabel(activeStage)}` : ''}</CardTitle>
           </CardHeader>
           <CardBody className="p-0">
             <div className="divide-y divide-neutral-50">

@@ -340,6 +340,8 @@ type TranslationKeys = {
   low: string;
   recommendedAction: string;
   disposalQueue: string;
+  legalKnowledgeBase: string;
+  legalKnowledgeBaseDesc: string;
   workflowStepper: string;
   classificationRestricted: string;
   archivePermanent: string;
@@ -358,6 +360,27 @@ type TranslationKeys = {
   toPermanentArchive: string;
   requestDisposal: string;
   languageDetected: string;
+  document: string;
+  category: string;
+  owner: string;
+  expiration: string;
+  totalExpiring: string;
+  allTypes: string;
+  allPriority: string;
+  pipelineUpload: string;
+  pipelineVirusScan: string;
+  pipelineValidation: string;
+  pipelineHash: string;
+  pipelineDedup: string;
+  pipelineOcr: string;
+  pipelineTextExtraction: string;
+  pipelineMetadata: string;
+  pipelineClassification: string;
+  pipelineChunking: string;
+  pipelineEmbedding: string;
+  pipelineIndexing: string;
+  pipelineAiAnalysis: string;
+  pipelineReady: string;
 };
 
 const translations: Record<Locale, TranslationKeys> = {
@@ -684,6 +707,8 @@ const translations: Record<Locale, TranslationKeys> = {
     low: 'LOW',
     recommendedAction: 'Recommended Action',
     disposalQueue: 'Disposal Queue',
+    legalKnowledgeBase: 'Legal Knowledge Base',
+    legalKnowledgeBaseDesc: 'Laws, circulars and decisions relating to archiving and document management in Algeria',
     workflowStepper: 'Workflow',
     classificationRestricted: 'Restricted',
     archivePermanent: 'Permanent Archive',
@@ -702,6 +727,27 @@ const translations: Record<Locale, TranslationKeys> = {
     toPermanentArchive: 'To Permanent Archive',
     requestDisposal: 'Request Disposal',
     languageDetected: 'Language',
+    document: 'Document',
+    category: 'Category',
+    owner: 'Owner',
+    expiration: 'Expiration',
+    totalExpiring: 'Total expiring',
+    allTypes: 'All types',
+    allPriority: 'All priority',
+    pipelineUpload: 'Upload',
+    pipelineVirusScan: 'Virus Scan',
+    pipelineValidation: 'Validation',
+    pipelineHash: 'Hash',
+    pipelineDedup: 'Dedup',
+    pipelineOcr: 'OCR',
+    pipelineTextExtraction: 'Text Extraction',
+    pipelineMetadata: 'Metadata',
+    pipelineClassification: 'Classification',
+    pipelineChunking: 'Chunking',
+    pipelineEmbedding: 'Embedding',
+    pipelineIndexing: 'Indexing',
+    pipelineAiAnalysis: 'AI Analysis',
+    pipelineReady: 'Ready',
   },
 
   ar: {
@@ -1027,6 +1073,8 @@ const translations: Record<Locale, TranslationKeys> = {
     low: 'منخفض',
     recommendedAction: 'الإجراء الموصى به',
     disposalQueue: 'قائمة الإتلاف',
+    legalKnowledgeBase: 'قاعدة المعرفة القانونية',
+    legalKnowledgeBaseDesc: 'القوانين والمناشير والقرارات المتعلقة بالأرشيف وإدارة الوثائق في الجزائر',
     workflowStepper: 'سير العمل',
     classificationRestricted: 'محظور',
     archivePermanent: 'أرشيف دائم',
@@ -1045,6 +1093,27 @@ const translations: Record<Locale, TranslationKeys> = {
     toPermanentArchive: 'إلى الأرشيف الدائم',
     requestDisposal: 'طلب الإتلاف',
     languageDetected: 'اللغة',
+    document: 'وثيقة',
+    category: 'فئة',
+    owner: 'المالك',
+    expiration: 'الانتهاء',
+    totalExpiring: 'إجمالي المنتهية',
+    allTypes: 'كل الأنواع',
+    allPriority: 'كل الأولويات',
+    pipelineUpload: 'الرفع',
+    pipelineVirusScan: 'فحص الفيروسات',
+    pipelineValidation: 'التحقق',
+    pipelineHash: 'التجزئة',
+    pipelineDedup: 'إزالة التكرار',
+    pipelineOcr: 'التعرف الضوئي',
+    pipelineTextExtraction: 'استخراج النص',
+    pipelineMetadata: 'البيانات الوصفية',
+    pipelineClassification: 'التصنيف',
+    pipelineChunking: 'التقطيع',
+    pipelineEmbedding: 'التضمين',
+    pipelineIndexing: 'الفهرسة',
+    pipelineAiAnalysis: 'تحليل الذكاء الاصطناعي',
+    pipelineReady: 'جاهز',
   },
 
   fr: {
@@ -1370,6 +1439,8 @@ const translations: Record<Locale, TranslationKeys> = {
     low: 'FAIBLE',
     recommendedAction: 'Action recommandée',
     disposalQueue: 'File de destruction',
+    legalKnowledgeBase: 'Base de connaissances juridique',
+    legalKnowledgeBaseDesc: 'Lois, circulaires et décisions relatives à l’archivage et à la gestion documentaire en Algérie',
     workflowStepper: 'Flux',
     classificationRestricted: 'Restreint',
     archivePermanent: 'Archive permanente',
@@ -1388,6 +1459,27 @@ const translations: Record<Locale, TranslationKeys> = {
     toPermanentArchive: 'Vers archive permanente',
     requestDisposal: 'Demander destruction',
     languageDetected: 'Langue',
+    document: 'Document',
+    category: 'Catégorie',
+    owner: 'Propriétaire',
+    expiration: 'Expiration',
+    totalExpiring: 'Total expirant',
+    allTypes: 'Tous les types',
+    allPriority: 'Toutes les priorités',
+    pipelineUpload: 'Téléversement',
+    pipelineVirusScan: 'Analyse antivirus',
+    pipelineValidation: 'Validation',
+    pipelineHash: 'Hachage',
+    pipelineDedup: 'Déduplication',
+    pipelineOcr: 'OCR',
+    pipelineTextExtraction: 'Extraction de texte',
+    pipelineMetadata: 'Métadonnées',
+    pipelineClassification: 'Classification',
+    pipelineChunking: 'Découpage',
+    pipelineEmbedding: 'Embedding',
+    pipelineIndexing: 'Indexation',
+    pipelineAiAnalysis: 'Analyse IA',
+    pipelineReady: 'Prêt',
   },
 };
 

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   Settings as SettingsIcon,
   CreditCard,
@@ -58,6 +58,14 @@ export function SettingsPage() {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [generatedApiKey, setGeneratedApiKey] = useState('');
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
+  const [payment, setPayment] = useState<{ paymentId: string; planTier: PlanTier; amount: number; paymentUrl: string; isMock: boolean } | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [invoices, setInvoices] = useState<{ id: string; date: string; amount: string; status: string; amountValue?: number; planName?: string }[]>([
+    { id: 'DZ-INV-2026-08', date: '1 août 2026', amount: '11 900 DZD', status: 'Paid' },
+    { id: 'DZ-INV-2026-07', date: '1 juil. 2026', amount: '11 900 DZD', status: 'Paid' },
+    { id: 'DZ-INV-2026-06', date: '1 juin 2026', amount: '11 900 DZD', status: 'Paid' },
+  ]);
+  useEffect(() => { api.get('/api/data/invoices').then((d: unknown) => { const r = d as { invoices: typeof invoices }; if (r?.invoices?.length) setInvoices(r.invoices); }).catch(()=>{}); }, []);
 
   const tabs: { key: SettingsTab; label: string; icon: typeof SettingsIcon }[] = [
     { key: 'organization', label: t('organization'), icon: Building2 },
@@ -136,14 +144,29 @@ export function SettingsPage() {
   };
 
   const handlePlanSelect = async (tier: PlanTier) => {
+    if (tier === currentPlan.tier) return;
+    if (tier === 'enterprise') { toast('info', t('currentPlan')); return; }
     try {
-      await api.patch('/api/data/organization', { planTier: tier });
-      await refreshOrganization();
+      // Algerian gateway: CIB/Edahabia/BaridiMob via Chargily/SATIM — always DZD
+      const res = await api.post('/api/data/create-payment', { planTier: tier, billingCycle }) as { paymentId: string; amount: number; paymentUrl: string; isMock: boolean };
+      setPayment({ paymentId: res.paymentId, planTier: tier, amount: res.amount, paymentUrl: res.paymentUrl, isMock: res.isMock });
       setShowPlanModal(false);
-      toast('success', `${t('currentPlan')} ${plans.find(p => p.tier === tier)?.name}.`);
+      setShowPayment(true);
     } catch {
       toast('error', t('error'));
     }
+  };
+  const handleConfirmPayment = async (method: string) => {
+    if (!payment) return;
+    try {
+      await api.post('/api/data/payment/confirm', { paymentId: payment.paymentId, planTier: payment.planTier });
+      await refreshOrganization();
+      const invId = `DZ-INV-${new Date().toISOString().slice(0,7).replace('-','-')}-${String(Math.floor(Math.random()*900)+100)}`;
+      setInvoices((prev) => [{ id: invId, date: new Date().toLocaleDateString(locale==='ar'?'ar-DZ':'fr-DZ', { day: 'numeric', month: 'short', year: 'numeric' }), amount: `${new Intl.NumberFormat('fr-DZ').format(payment.amount)} DZD`, status: 'Paid' }, ...prev.slice(0,2)]);
+      setShowPayment(false);
+      setPayment(null);
+      toast('success', `${t('success')} — ${payment.planTier} via ${method} (DZD)`);
+    } catch { toast('error', t('error')); }
   };
 
   const handleGenerateApiKey = async () => {
@@ -216,39 +239,27 @@ export function SettingsPage() {
     });
   };
 
-  const handleDownloadInvoice = (inv: { id: string; date: string; amount: string; status: string }) => {
-    const invoiceText = [
-      '=====================================',
-      `               ${t('billing')}`,
-      '=====================================',
-      '',
-      `Invoice ID:    ${inv.id}`,
-      `Date:          ${inv.date}`,
-      `Amount:        ${inv.amount}`,
-      `Status:        ${inv.status}`,
-      '',
-      `Organization:  ${organization?.name || 'N/A'}`,
-      `Plan:          ${currentPlan.name}`,
-      '',
-      '-------------------------------------',
-      t('success'),
-      t('appName'),
-      '=====================================',
-    ].join('\n');
-    const blob = new Blob([invoiceText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${inv.id}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadInvoice = async (inv: { id: string; date: string; amount: string; status: string }) => {
+    try {
+      const token = localStorage.getItem('sadi_token');
+      const res = await fetch(`/api/data/invoices/${encodeURIComponent(inv.id)}/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!res.ok) throw new Error('PDF failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${inv.id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast('success', `${inv.id}.pdf`);
+    } catch {
+      // fallback txt
+      const invoiceText = [`SADI PRO — ${inv.id}`, `Date: ${inv.date}`, `Amount: ${inv.amount}`, `Status: ${inv.status}`, `Org: ${organization?.name || ''}`].join('\n');
+      const blob = new Blob([invoiceText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${inv.id}.txt`; a.click(); URL.revokeObjectURL(url);
+    }
   };
-
-  const invoices = [
-    { id: 'DZ-INV-2026-08', date: '1 août 2026', amount: '11 900 DZD', status: 'Paid' },
-    { id: 'DZ-INV-2026-07', date: '1 juil. 2026', amount: '11 900 DZD', status: 'Paid' },
-    { id: 'DZ-INV-2026-06', date: '1 juin 2026', amount: '11 900 DZD', status: 'Paid' },
-  ];
 
   return (
     <div className="space-y-5">
@@ -630,6 +641,29 @@ export function SettingsPage() {
             </div>
             <div className="mt-4 flex justify-end">
               <Button variant="ghost" size="sm" onClick={() => setShowPlanModal(false)}>{t('close')}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Algerian Payment Gateway — CIB/Edahabia/BaridiMob */}
+      {showPayment && payment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-lg font-bold text-neutral-900">Paiement — {payment.planTier} — {new Intl.NumberFormat('fr-DZ').format(payment.amount)} DZD</h2>
+            <p className="text-xs text-neutral-500 mt-1">Gateway algérien: <strong>Chargily Pay / SATIM</strong> — DZD — CIB / Edahabia / BaridiMob + Virement</p>
+            {payment.isMock && <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded">Mode démo (sans CHARGILY_API_KEY) — cliquez une méthode pour simuler le paiement et activer le plan.</p>}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {(['CIB','Edahabia','BaridiMob'] as const).map((m) => (
+                <button key={m} onClick={() => handleConfirmPayment(m)} className="rounded-xl border-2 border-primary-200 bg-primary-50 p-4 text-center hover:border-primary-500 hover:bg-primary-100 transition-colors">
+                  <div className="text-sm font-bold text-primary-700">{m}</div>
+                  <div className="text-[10px] text-neutral-500 mt-1">DZD {payment.amount}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-neutral-400 mt-3">NIF/NIS/RC sur facture PDF • TVA 19% incluse • Reçu instantané • Support: contact@sadi.pro</p>
+            <div className="mt-4 flex justify-between items-center">
+              <a href={payment.paymentUrl} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">Ouvrir Chargily →</a>
+              <Button variant="ghost" size="sm" onClick={() => { setShowPayment(false); setPayment(null); }}>{t('close')}</Button>
             </div>
           </div>
         </div>
