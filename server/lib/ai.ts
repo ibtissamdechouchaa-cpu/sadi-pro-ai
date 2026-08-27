@@ -19,6 +19,33 @@ function getGemini(): GoogleGenerativeAI | null {
   return gemini;
 }
 
+// --- Startup check ---
+export function checkAIProviders(): { gemini: boolean; openai: boolean } {
+  const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  if (!hasGemini && !hasOpenAI) {
+    console.warn("[AI] ⚠️  No AI provider configured! Set GEMINI_API_KEY or OPENAI_API_KEY in Render Environment.");
+    console.warn("[AI]    → Gemini free: https://aistudio.google.com/apikey");
+    console.warn("[AI]    → AI features will use heuristic fallback (no real AI analysis).");
+  } else {
+    console.log(`[AI] Providers: Gemini=${hasGemini ? '✓' : '✗'} | OpenAI=${hasOpenAI ? '✓' : '✗'}`);
+  }
+  return { gemini: hasGemini, openai: hasOpenAI };
+}
+
+export function getAIStatus(): { configured: boolean; providers: string[]; message: string } {
+  const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  const providers = [];
+  if (hasGemini) providers.push("Gemini");
+  if (hasOpenAI) providers.push("OpenAI");
+  const configured = hasGemini || hasOpenAI;
+  const message = configured
+    ? `AI مُعد: ${providers.join(" + ")}`
+    : "⚠️ لا يوجد مزود AI مُعد. أضف GEMINI_API_KEY أو OPENAI_API_KEY في Render Environment. Gemini مجاني: https://aistudio.google.com/apikey";
+  return { configured, providers, message };
+}
+
 export interface ReasoningStep {
   step: number;
   title: string;

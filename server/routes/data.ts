@@ -1657,60 +1657,107 @@ data.get("/documents/:id/retention-suggestion", async (c) => {
   if (perm) return perm;
   const orgId = c.get("orgId");
   const { id } = c.req.param();
+  const lang = c.req.query("lang") || "ar";
 
   const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
   if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const langInstruction = lang === "ar"
+    ? "أجب بالعربية الفصحى. اكتب reason وapplicableRule بالعربية."
+    : lang === "fr"
+    ? "Réponds en français. Écris reason et applicableRule en français."
+    : "Respond in English.";
 
   try {
     const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
     const context = extracted.text.slice(0, 8000);
 
-    const prompt = `Analyze this document and suggest a retention period. Return JSON only:
+    const prompt = `${langInstruction}
+
+حلل هذه الوثيقة واقترح مدة احتفاظ. أرجع JSON فقط:
 {
-  "retentionYears": <number>,
-  "reason": "<explain why this period was suggested>",
-  "documentType": "<detected type>",
-  "classification": "<detected classification>",
+  "retentionYears": <عدد>,
+  "reason": "<سبب الاقتراح>",
+  "documentType": "<نوع الوثيقة>",
+  "classification": "<التصنيف>",
   "confidence": <0-1>,
-  "applicableRule": "<which rule/law applies>",
+  "applicableRule": "<القانون أو التنظيم المطبق>",
   "action": "DELETE|REVIEW|TRANSFER_TO_ARCHIVE|PERMANENT_ARCHIVE"
 }
 
-Document: ${doc.title}
-Type: ${doc.type}
-Classification: ${doc.classification}
-Content: ${context}`;
+الوثيقة: ${doc.title}
+النوع: ${doc.type}
+التصنيف: ${doc.classification}
+المحتوى: ${context}`;
 
-    // Try OpenAI, fallback to heuristic if no key or error
+    // Try Gemini first, then OpenAI, fallback to heuristic
     let suggestion: Record<string, unknown> | null = null;
+
+    // Gemini
     try {
-      if (!process.env.OPENAI_API_KEY) throw new Error("No OPENAI key");
-      const { default: OpenAI } = await import("openai");
-      const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const result = await openaiClient.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-      });
-      suggestion = JSON.parse(result.choices[0]?.message?.content || "{}");
+      const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+      if (!key) throw new Error("No Gemini key");
+      const { GoogleGenerativeAI } = await import("@google/generative-ai");
+      const g = new GoogleGenerativeAI(key);
+      const model = g.getGenerativeModel({ model: "gemini-flash-latest" });
+      const result = await model.generateContent(prompt);
+      const raw = result.response.text();
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) suggestion = JSON.parse(m[0]);
     } catch (e) {
-      console.warn("OpenAI retention suggestion fell back to heuristic:", e);
+      console.warn("Gemini retention suggestion fell back:", e);
+    }
+
+    // OpenAI
+    if (!suggestion || !suggestion.retentionYears) {
+      try {
+        if (!process.env.OPENAI_API_KEY) throw new Error("No OPENAI key");
+        const { default: OpenAI } = await import("openai");
+        const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const result = await openaiClient.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+        });
+        suggestion = JSON.parse(result.choices[0]?.message?.content || "{}");
+      } catch (e) {
+        console.warn("OpenAI retention suggestion fell back to heuristic:", e);
+      }
     }
 
     if (!suggestion || !suggestion.retentionYears) {
-      // Heuristic fallback based on type/classification + LegalReference
       const map: Record<string, number> = { contract: 10, legal: 10, financial: 10, invoice: 7, policy: 7, hr: 5, technical: 5, report: 5, letter: 3, certificate: 10, id: 5, other: 5 };
       const base = map[doc.type] || 5;
       const mult = doc.classification === 'restricted' || doc.classification === 'highly_confidential' ? 2 : doc.classification === 'confidential' ? 1.5 : 1;
       const years = Math.min(50, Math.max(1, Math.round(base * mult)));
-      let rule = "Heuristic — Loi 88-09 + circulaire interne";
+      let rule = lang === "ar" ? "تحليل تلقائي — القانون 88-09 + Publié circulaire داخلي" : "Heuristic — Loi 88-09 + circulaire interne";
       try {
         const ref = await prisma.legalReference.findFirst({ where: { OR: [{ organizationId: orgId }, { organizationId: null }], referenceType: "law" }, orderBy: { date: "desc" } });
         if (ref) rule = `${ref.referenceNumber}: ${ref.title}`;
       } catch {}
+      const typeLabels: Record<string, Record<string, string>> = {
+        ar: { contract: "عقد", legal: "قانوني", financial: "مالي", invoice: "فاتورة", policy: "سياسة", hr: "موارد بشرية", technical: "تقني", report: "تقرير", letter: "رسالة", certificate: "شهادة", id: "هوية", other: "أخرى" },
+        fr: { contract: "contrat", legal: "juridique", financial: "financier", invoice: "facture", policy: "politique", hr: "RH", technical: "technique", report: "rapport", letter: "lettre", certificate: "certificat", id: "identité", other: "autre" },
+        en: { contract: "contract", legal: "legal", financial: "financial", invoice: "invoice", policy: "policy", hr: "HR", technical: "technical", report: "report", letter: "letter", certificate: "certificate", id: "ID", other: "other" },
+      };
+      const clsLabels: Record<string, Record<string, string>> = {
+        ar: { public: "عام", internal: "داخلي", confidential: "سري", highly_confidential: "سري جداً", restricted: "مقيّد" },
+        fr: { public: "public", internal: "interne", confidential: "confidentiel", highly_confidential: "très confidentiel", restricted: "restreint" },
+        en: { public: "public", internal: "internal", confidential: "confidential", highly_confidential: "highly confidential", restricted: "restricted" },
+      };
+      const tl = typeLabels[lang] || typeLabels.en;
+      const cl = clsLabels[lang] || clsLabels.en;
+      const typeName = tl[doc.type] || doc.type;
+      const clsName = cl[doc.classification] || doc.classification;
+      const highVal = lang === "ar" ? "قيمة قانونية عالية" : lang === "fr" ? "Valeur juridique élevée" : "High legal value";
+      const stdRet = lang === "ar" ? "احتفاظ قياسي" : lang === "fr" ? "Rétention standard" : "Standard retention";
       suggestion = {
         retentionYears: years,
-        reason: `Heuristic: type=${doc.type}, classification=${doc.classification}, base ${base}y × ${mult} → ${years}y. ${years >= 10 ? "High legal value" : "Standard retention"}.`,
+        reason: lang === "ar"
+          ? `تحليل تلقائي: نوع الوثيقة "${typeName}"، التصنيف "${clsName}"، 기본 ${base} سنوات × ${mult} = ${years} سنوات. ${years >= 10 ? highVal : stdRet}.`
+          : lang === "fr"
+          ? `Heuristique: type=${typeName}, classification=${clsName}, base ${base}y × ${mult} → ${years}y. ${years >= 10 ? highVal : stdRet}.`
+          : `Heuristic: type=${typeName}, classification=${clsName}, base ${base}y × ${mult} → ${years}y. ${years >= 10 ? highVal : stdRet}.`,
         documentType: doc.type,
         classification: doc.classification,
         confidence: 0.6,
@@ -1722,13 +1769,15 @@ Content: ${context}`;
     return c.json({ suggestion });
   } catch (err: unknown) {
     console.error("retention-suggestion failed:", err);
+    const fallbackReason = lang === "ar" ? "تحليل افتراضي: 5 سنوات قياسياً (حدث خطأ أثناء التحليل)." : lang === "fr" ? "Fallback: 5 ans standard (erreur lors de l'analyse)." : "Fallback: standard 5 years (error during analysis).";
+    const fallbackRule = lang === "ar" ? "القانون 88-09 — افتراضي" : lang === "fr" ? "Loi 88-09 — fallback" : "Loi 88-09 — fallback";
     const fallback = {
       retentionYears: 5,
-      reason: "Fallback: standard 5 years (error during analysis, check AI keys).",
+      reason: fallbackReason,
       documentType: doc.type,
       classification: doc.classification,
       confidence: 0.5,
-      applicableRule: "Loi 88-09 — fallback",
+      applicableRule: fallbackRule,
       action: "REVIEW",
     };
     return c.json({ suggestion: fallback });

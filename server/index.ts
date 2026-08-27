@@ -114,6 +114,25 @@ app.get("/api/r2-status", async (c) => {
   return c.json({ isR2Configured: isConfigured, hasEndpoint: Boolean(endpointRaw), endpointRaw, endpointNormalized, bucket, hasKey, hasSecret, probe, r2: isConfigured ? "configured" : "local-fallback" });
 });
 
+// AI status check — no auth required
+app.get("/api/ai-status", async (c) => {
+  const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  const hasOpenAI = !!process.env.OPENAI_API_KEY;
+  const configured = hasGemini || hasOpenAI;
+  const providers = [];
+  if (hasGemini) providers.push("Gemini");
+  if (hasOpenAI) providers.push("OpenAI");
+  return c.json({
+    configured,
+    providers,
+    hasGemini,
+    hasOpenAI,
+    message: configured
+      ? `AI مُعد: ${providers.join(" + ")}`
+      : "⚠️ لا يوجد مزود AI. أضف GEMINI_API_KEY في Render Environment. مجاني: https://aistudio.google.com/apikey",
+  });
+});
+
 app.route("/api/auth", authRoutes);
 app.route("/api/data", dataRoutes);
 
@@ -166,6 +185,12 @@ async function retentionCron() {
 }
 setTimeout(retentionCron, 10000);
 setInterval(retentionCron, 3600_000);
+
+// AI startup check
+try {
+  const { checkAIProviders } = await import("./lib/ai.js");
+  checkAIProviders();
+} catch {}
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log(`API server running on http://localhost:${info.port}`);

@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   FileText,
   Download,
+  Loader2,
   Share2,
   Trash2,
   Shield,
@@ -66,6 +67,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   const [tab, setTab] = useState<Tab>('overview');
   const [showShare, setShowShare] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
+  const [aiStatus, setAiStatus] = useState<{ configured: boolean; message: string } | null>(null);
   
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
   const [retentionSuggestion, setRetentionSuggestion] = useState<any>(null);
@@ -75,13 +77,17 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   const [translation, setTranslation] = useState('');
   const [translating, setTranslating] = useState(false);
   const [translationLang, setTranslationLang] = useState<'ar' | 'fr' | 'en'>('fr');
+  const [processingAI, setProcessingAI] = useState(false);
 
   useEffect(() => {
     if (tab === 'signatures') {
       setLoadingSignatures(true);
       api.get(`/api/data/documents/${doc.id}/signatures`).then((d: unknown) => setSignatures((d as { signatures: unknown[] }).signatures as never[])).catch(() => {}).finally(() => setLoadingSignatures(false));
     }
-  }, [tab, doc.id]);
+    if (tab === 'insights' && !aiStatus) {
+      fetch('/api/ai-status').then(r => r.json()).then(setAiStatus).catch(() => setAiStatus({ configured: false, message: 'Unable to check AI status.' }));
+    }
+  }, [tab, doc.id, aiStatus]);
 
   const department = departments.find((d) => d.id === doc.departmentId);
   const relatedDocs = documents.filter((d) => doc.relatedDocIds.includes(d.id));
@@ -283,7 +289,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                     onClick={async () => {
                       setLoadingRetention(true);
                       try {
-                        const data = await api.get(`/api/data/documents/${doc.id}/retention-suggestion`);
+                        const data = await api.get(`/api/data/documents/${doc.id}/retention-suggestion?lang=${locale}`);
                         setRetentionSuggestion(data.suggestion);
                       } catch (e) { toast('error', t('error')); }
                       setLoadingRetention(false);
@@ -572,16 +578,20 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                   <div className="pt-3 border-t border-neutral-100">
                     <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('metadata')}</p>
                     <div className="space-y-2">
-                      {Object.entries(doc.metadata).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between border-b border-neutral-50 pb-2">
-                          <span className="text-sm text-neutral-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                          <span className="text-sm font-medium text-neutral-900">
-                            {typeof value === 'object' && value !== null
-                              ? Array.isArray(value) ? value.join(', ') : JSON.stringify(value)
-                              : String(value ?? '')}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.entries(doc.metadata)
+                        .filter(([key]) => !['insight', 'analysis', 'processedAt', 'analyzedAt'].includes(key))
+                        .map(([key, value]) => {
+                          const displayValue = typeof value === 'object' && value !== null
+                            ? Array.isArray(value) ? value.join(', ') : null
+                            : String(value ?? '');
+                          if (displayValue === null || displayValue === '[object Object]') return null;
+                          return (
+                            <div key={key} className="flex items-center justify-between border-b border-neutral-50 pb-2">
+                              <span className="text-sm text-neutral-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                              <span className="text-sm font-medium text-neutral-900 truncate max-w-[200px]" title={displayValue}>{displayValue}</span>
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 </>
@@ -619,6 +629,27 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
 
         {tab === 'insights' && (
           <div className="space-y-4">
+            {aiStatus && !aiStatus.configured && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">{locale === 'ar' ? 'مفتاح AI غير مُعد' : 'AI non configuré'}</p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      {locale === 'ar'
+                        ? 'لا يوجد مزود ذكاء اصطناعي مُعد. التحليل يعمل بتقنية بحتة (بدون AI حقيقي). لإعداد Gemini المجاني: '
+                        : 'Aucun fournisseur IA configuré. L\'analyse utilise des heuristiques. Pour Gemini gratuit : '}
+                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="underline font-medium">aistudio.google.com/apikey</a>
+                    </p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      {locale === 'ar'
+                        ? '→ أضف GEMINI_API_KEY في Render Environment'
+                        : '→ Ajoutez GEMINI_API_KEY dans Render Environment'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {doc.insight?.reasoning && doc.insight.reasoning.length > 0 && (
               <ReasoningTrace steps={doc.insight.reasoning} summary={doc.insight.reasoningSummary} defaultOpen={false} />
             )}
@@ -758,8 +789,10 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                   <Button
                     variant="primary"
                     size="sm"
-                    icon={<Sparkles className="h-3.5 w-3.5" />}
+                    disabled={processingAI}
+                    icon={processingAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                     onClick={async () => {
+                      setProcessingAI(true);
                       try {
                         const token = localStorage.getItem('sadi_token');
                         const res = await fetch(`/api/data/documents/${doc.id}/process`, {
@@ -774,10 +807,12 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                         }
                       } catch {
                         toast('error', t('error'));
+                      } finally {
+                        setProcessingAI(false);
                       }
                     }}
                   >
-                    {t('aiInsights')}
+                    {processingAI ? (locale === 'ar' ? 'جاري التحليل...' : 'Analyse en cours...') : t('aiInsights')}
                   </Button>
                 </CardBody>
               </Card>
