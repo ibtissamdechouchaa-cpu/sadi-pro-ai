@@ -52,6 +52,8 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const [form, setForm] = useState({ name: '', documentType: 'other', retentionYears: 7, jurisdiction: '', sector: '' });
   const [holdPickerFor, setHoldPickerFor] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
+  const [legalRefs, setLegalRefs] = useState<any[]>([]);
+  const [loadingLegalRefs, setLoadingLegalRefs] = useState(false);
 
   const loadRetentionPolicies = useCallback(async () => {
     try {
@@ -61,6 +63,17 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   }, []);
 
   useEffect(() => { loadRetentionPolicies(); }, [loadRetentionPolicies]);
+
+  const loadLegalRefs = useCallback(async () => {
+    setLoadingLegalRefs(true);
+    try {
+      const data = await api.get('/api/data/legal-references');
+      if (data.references) setLegalRefs(data.references);
+    } catch {}
+    setLoadingLegalRefs(false);
+  }, []);
+
+  useEffect(() => { loadLegalRefs(); }, [loadLegalRefs]);
 
   const resetForm = () => { setForm({ name: '', documentType: 'other', retentionYears: 7, jurisdiction: '', sector: '' }); setEditing(null); setShowCreate(false); };
 
@@ -139,6 +152,7 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
     { key: 'retention' as const, label: t('retentionPolicies'), icon: Clock },
     { key: 'legal-hold' as const, label: t('legalHolds'), icon: Shield },
     { key: 'frameworks' as const, label: t('compliance'), icon: Scale },
+    { key: 'legal-kb' as const, label: 'Base de données juridique', icon: FileText },
   ];
 
   return (
@@ -357,7 +371,54 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
                 </CardBody>
               </Card>
             ))}
-          </div>
+           </div>
+        </div>
+      )}
+
+      {tab === 'legal-kb' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Base de Connaissances Juridique Algérienne</CardTitle>
+              <p className="text-sm text-neutral-500 mt-1">Lois, circulaires et décisions relatives à l'archivage et à la gestion documentaire en Algérie</p>
+            </CardHeader>
+            <CardBody>
+              {loadingLegalRefs ? (
+                <div className="text-center py-8 text-neutral-500">Chargement...</div>
+              ) : legalRefs.length === 0 ? (
+                <EmptyState icon={<FileText className="h-8 w-8" />} title="Aucune référence" description="Aucune référence juridique trouvée" />
+              ) : (
+                <div className="space-y-3">
+                  {legalRefs.map((ref) => (
+                    <div key={ref.id} className="border border-neutral-200 rounded-lg p-4 hover:bg-neutral-50 transition-colors">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={ref.referenceType === 'law' ? 'primary' : ref.referenceType === 'circular' ? 'warning' : 'success'}>
+                              {ref.referenceType === 'law' ? 'Loi' : ref.referenceType === 'circular' ? 'Circulaire' : 'Décision'}
+                            </Badge>
+                            <span className="text-xs text-neutral-500">{ref.referenceNumber}</span>
+                          </div>
+                          <h3 className="text-sm font-semibold text-neutral-900 mt-2">{ref.title}</h3>
+                          {ref.description && <p className="text-xs text-neutral-600 mt-1">{ref.description}</p>}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {ref.retentionRules?.minYears && (
+                              <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
+                                Rétention: {ref.retentionRules.minYears}-{ref.retentionRules.maxYears || ref.retentionRules.minYears} ans
+                              </span>
+                            )}
+                            {ref.retentionRules?.documentTypes?.slice(0, 3).map((dt: string) => (
+                              <span key={dt} className="text-xs bg-primary-50 text-primary-600 px-2 py-0.5 rounded">{dt}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
         </div>
       )}
 

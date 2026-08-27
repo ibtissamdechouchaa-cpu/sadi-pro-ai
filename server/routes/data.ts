@@ -1148,4 +1148,544 @@ data.post("/documents/:id/ask", async (c) => {
   return c.json({ answer: chatResult.answer, reasoning: chatResult.reasoning, reasoningSummary: chatResult.reasoningSummary });
 });
 
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENT STATUS WORKFLOW
+// ═══════════════════════════════════════════════════════════════
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft: ["pending_review"],
+  pending_review: ["approved", "rejected"],
+  rejected: ["draft", "pending_review"],
+  approved: ["signed", "active"],
+  signed: ["active"],
+  active: ["archived", "pending_disposal"],
+  archived: ["permanent_archive", "pending_disposal"],
+  permanent_archive: [],
+  pending_disposal: ["disposed", "active"],
+  disposed: [],
+};
+
+data.patch("/documents/:id/status", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+  const { status: newStatus, reason } = await c.req.json<{ status: string; reason?: string }>();
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const allowed = VALID_TRANSITIONS[doc.approvalState] || [];
+  if (!allowed.includes(newStatus)) {
+    return c.json({ error: `Cannot transition from ${doc.approvalState} to ${newStatus}` }, 400);
+  }
+
+  const updated = await prisma.document.update({
+    where: { id },
+    data: { approvalState: newStatus, modifiedAt: new Date() },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: orgId,
+      userId,
+      action: "DOCUMENT_STATUS_CHANGED",
+      resourceType: "document",
+      resourceId: id,
+      resourceName: doc.title,
+      metadata: { from: doc.approvalState, to: newStatus, reason: reason || "" },
+    },
+  });
+
+  return c.json({ document: updated });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// AI SUMMARY (short / standard / detailed)
+// ═══════════════════════════════════════════════════════════════
+
+data.get("/documents/:id/summary", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+  const level = (c.req.query("level") || "standard") as "short" | "standard" | "detailed";
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const context = extracted.text.slice(0, 12000);
+
+  const lengthGuide = level === "short" ? "2-3 sentences" : level === "detailed" ? "a comprehensive 1-paragraph summary" : "a 1-paragraph summary";
+
+  const prompt = `Provide ${lengthGuide} of this document. Include: topic, purpose, key information, parties involved, important dates, required actions, importance level, and keywords.\n\nDocument: ${doc.title}\nContent: ${context}`;
+
+  const { default: OpenAI } = await import("openai");
+  const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const result = await openaiClient.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: level === "short" ? 200 : level === "detailed" ? 1000 : 500,
+  });
+
+  const summary = result.choices[0]?.message?.content || "Unable to generate summary.";
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: orgId,
+      userId: c.get("userId"),
+      action: "DOCUMENT_SUMMARIZED",
+      resourceType: "document",
+      resourceId: id,
+      resourceName: doc.title,
+      metadata: { level },
+    },
+  });
+
+  return c.json({ summary, level });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// AI RETENTION SUGGESTION
+// ═══════════════════════════════════════════════════════════════
+
+data.get("/documents/:id/retention-suggestion", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const context = extracted.text.slice(0, 8000);
+
+  const prompt = `Analyze this document and suggest a retention period. Return JSON only:
+{
+  "retentionYears": <number>,
+  "reason": "<explain why this period was suggested>",
+  "documentType": "<detected type>",
+  "classification": "<detected classification>",
+  "confidence": <0-1>,
+  "applicableRule": "<which rule/law applies>",
+  "action": "DELETE|REVIEW|TRANSFER_TO_ARCHIVE|PERMANENT_ARCHIVE"
+}
+
+Document: ${doc.title}
+Type: ${doc.type}
+Classification: ${doc.classification}
+Content: ${context}`;
+
+  const { default: OpenAI } = await import("openai");
+  const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const result = await openaiClient.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+  });
+
+  const suggestion = JSON.parse(result.choices[0]?.message?.content || "{}");
+  return c.json({ suggestion });
+});
+
+data.patch("/documents/:id/retention", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+  const { retentionYears, reason } = await c.req.json<{ retentionYears: number; reason?: string }>();
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const expiresAt = new Date();
+  expiresAt.setFullYear(expiresAt.getFullYear() + retentionYears);
+
+  const updated = await prisma.document.update({
+    where: { id },
+    data: { retentionYears, retentionReason: reason || "Manual", expiresAt, modifiedAt: new Date() },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: orgId,
+      userId,
+      action: "RETENTION_UPDATED",
+      resourceType: "document",
+      resourceId: id,
+      resourceName: doc.title,
+      metadata: { retentionYears, reason, expiresAt: expiresAt.toISOString() },
+    },
+  });
+
+  return c.json({ document: updated });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// RETENTION ALERTS (30/15/7/1 day)
+// ═══════════════════════════════════════════════════════════════
+
+data.get("/retention-alerts", async (c) => {
+  const orgId = c.get("orgId");
+  const now = new Date();
+
+  const docs = await prisma.document.findMany({
+    where: { organizationId: orgId, deletedAt: null, expiresAt: { not: null }, archiveState: { notIn: ["disposed", "permanent_archive"] } },
+  });
+
+  const alerts = docs.map((doc) => {
+    const daysLeft = Math.ceil((new Date(doc.expiresAt!).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    let urgency = "normal";
+    if (daysLeft <= 0) urgency = "expired";
+    else if (daysLeft <= 1) urgency = "critical";
+    else if (daysLeft <= 7) urgency = "high";
+    else if (daysLeft <= 15) urgency = "medium";
+    else if (daysLeft <= 30) urgency = "low";
+
+    return { id: doc.id, title: doc.title, type: doc.type, expiresAt: doc.expiresAt, daysLeft, urgency, classification: doc.classification };
+  });
+
+  alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+  return c.json({ alerts });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PERMANENT ARCHIVE
+// ═══════════════════════════════════════════════════════════════
+
+data.patch("/documents/:id/permanent-archive", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const updated = await prisma.document.update({
+    where: { id },
+    data: { archiveState: "permanent_archive", approvalState: "archived", modifiedAt: new Date() },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: orgId,
+      userId,
+      action: "DOCUMENT_PERMANENTLY_ARCHIVED",
+      resourceType: "document",
+      resourceId: id,
+      resourceName: doc.title,
+      metadata: { previousState: doc.archiveState },
+    },
+  });
+
+  return c.json({ document: updated });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CONTROLLED DISPOSAL
+// ═══════════════════════════════════════════════════════════════
+
+data.post("/disposal-requests", async (c) => {
+  const perm = await assertPermission(c, "document.delete");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { documentId, reason } = await c.req.json<{ documentId: string; reason?: string }>();
+
+  const doc = await prisma.document.findFirst({ where: { id: documentId, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Document not found" }, 404);
+  if (doc.archiveState === "disposed") return c.json({ error: "Already disposed" }, 400);
+
+  const user = await prisma.profile.findUnique({ where: { id: userId } });
+
+  const request = await prisma.disposalRequest.create({
+    data: {
+      documentId,
+      organizationId: orgId,
+      requestedBy: userId,
+      requestedByName: user?.fullName || "Unknown",
+      reason: reason || "",
+      status: "pending",
+    },
+  });
+
+  await prisma.document.update({ where: { id: documentId }, data: { archiveState: "pending_disposal" } });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: orgId,
+      userId,
+      action: "DISPOSAL_REQUESTED",
+      resourceType: "document",
+      resourceId: documentId,
+      resourceName: doc.title,
+      metadata: { reason, requestId: request.id },
+    },
+  });
+
+  return c.json({ request });
+});
+
+data.get("/disposal-requests", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const requests = await prisma.disposalRequest.findMany({
+    where: { organizationId: orgId },
+    orderBy: { createdAt: "desc" },
+  });
+  return c.json({ requests });
+});
+
+data.patch("/disposal-requests/:id/approve", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+  const { action } = await c.req.json<{ action: "approve" | "reject" }>();
+
+  const request = await prisma.disposalRequest.findFirst({ where: { id, organizationId: orgId } });
+  if (!request) return c.json({ error: "Not found" }, 404);
+
+  const user = await prisma.profile.findUnique({ where: { id: userId } });
+
+  if (action === "approve") {
+    await prisma.disposalRequest.update({
+      where: { id },
+      data: { status: "approved", approvedBy: userId, approvedByName: user?.fullName, approvedAt: new Date() },
+    });
+    await prisma.document.update({ where: { id: request.documentId }, data: { archiveState: "disposed" } });
+    try { await deleteFromR2((await prisma.document.findUnique({ where: { id: request.documentId } }))?.filePath || ""); } catch {}
+
+    await prisma.auditLog.create({
+      data: {
+        organizationId: orgId, userId, action: "DISPOSAL_APPROVED",
+        resourceType: "document", resourceId: request.documentId,
+        metadata: { requestId: id },
+      },
+    });
+  } else {
+    await prisma.disposalRequest.update({ where: { id }, data: { status: "rejected" } });
+    await prisma.document.update({ where: { id: request.documentId }, data: { archiveState: "active" } });
+  }
+
+  return c.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENT VERSIONING
+// ═══════════════════════════════════════════════════════════════
+
+data.get("/documents/:id/versions", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+  const versions = await prisma.documentVersion.findMany({
+    where: { documentId: id, organizationId: orgId },
+    orderBy: { version: "desc" },
+  });
+  return c.json({ versions });
+});
+
+data.post("/documents/:id/versions", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+  const body = await c.req.parseBody();
+  const file = body["file"];
+  const changes = body["changes"] as string || "";
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const newVersion = doc.version + 1;
+  let filePath = doc.filePath;
+
+  if (file && typeof file !== "string") {
+    const r2Key = `${orgId}/${id}-v${newVersion}.${(file.name?.split(".").pop() || "bin")}`;
+    const arrayBuffer = await file.arrayBuffer();
+    await uploadToR2(r2Key, Buffer.from(arrayBuffer), file.type || "application/octet-stream");
+    filePath = r2Key;
+  }
+
+  const user = await prisma.profile.findUnique({ where: { id: userId } });
+
+  await prisma.documentVersion.create({
+    data: {
+      documentId: id, organizationId: orgId, version: doc.version,
+      uploadedBy: userId, uploadedByName: user?.fullName, filePath: doc.filePath,
+      fileSize: doc.fileSize, hash: doc.hash, changes: "Previous version", status: "archived",
+    },
+  });
+
+  await prisma.document.update({
+    where: { id },
+    data: { version: newVersion, filePath, modifiedAt: new Date() },
+  });
+
+  return c.json({ version: newVersion });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// AI TRANSLATION
+// ═══════════════════════════════════════════════════════════════
+
+data.post("/documents/:id/translate", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+  const { targetLang } = await c.req.json<{ targetLang: "ar" | "fr" | "en" }>();
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const context = extracted.text.slice(0, 12000);
+  const langNames = { ar: "Arabic", fr: "French", en: "English" };
+
+  const prompt = `Translate the following document to ${langNames[targetLang]}. Preserve structure, headings, paragraphs, tables, document numbers, dates, and legal terminology. Return the translation only.\n\nDocument: ${doc.title}\nContent: ${context}`;
+
+  const { default: OpenAI } = await import("openai");
+  const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const result = await openaiClient.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 4000,
+  });
+
+  const translation = result.choices[0]?.message?.content || "";
+
+  const version = doc.version + 1;
+  const r2Key = `${orgId}/${id}-translated-${targetLang}-v${version}.txt`;
+  await uploadToR2(r2Key, Buffer.from(translation, "utf-8"), "text/plain; charset=utf-8");
+
+  const user = await prisma.profile.findUnique({ where: { id: userId } });
+
+  await prisma.documentVersion.create({
+    data: {
+      documentId: id, organizationId: orgId, version: doc.version,
+      uploadedBy: userId, uploadedByName: user?.fullName, filePath: doc.filePath,
+      fileSize: doc.fileSize, hash: doc.hash, changes: `Translated to ${langNames[targetLang]}`, status: "archived",
+    },
+  });
+
+  await prisma.document.update({ where: { id }, data: { version, modifiedAt: new Date() } });
+
+  await prisma.auditLog.create({
+    data: {
+      organizationId: orgId, userId: c.get("userId"),
+      action: "DOCUMENT_TRANSLATED", resourceType: "document", resourceId: id,
+      resourceName: doc.title, metadata: { targetLang, version },
+    },
+  });
+
+  return c.json({ translation, version, filePath: r2Key });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ELECTRONIC SIGNATURE
+// ═══════════════════════════════════════════════════════════════
+
+data.post("/documents/:id/signatures", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+  const { signers } = await c.req.json<{ signers: { email: string; name: string; order: number }[] }>();
+
+  const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
+  if (!doc) return c.json({ error: "Not found" }, 404);
+
+  for (const s of signers) {
+    await prisma.signature.create({
+      data: {
+        documentId: id, organizationId: orgId,
+        signerId: s.email, signerName: s.name, signerEmail: s.email,
+        order: s.order, status: "pending", documentVersion: doc.version,
+      },
+    });
+  }
+
+  await prisma.document.update({ where: { id }, data: { signatureState: "pending" } });
+
+  return c.json({ ok: true });
+});
+
+data.get("/documents/:id/signatures", async (c) => {
+  const perm = await assertPermission(c, "document.read");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const { id } = c.req.param();
+  const sigs = await prisma.signature.findMany({
+    where: { documentId: id, organizationId: orgId },
+    orderBy: { order: "asc" },
+  });
+  return c.json({ signatures: sigs });
+});
+
+data.patch("/signatures/:id/sign", async (c) => {
+  const perm = await assertPermission(c, "document.update");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const userId = c.get("userId");
+  const { id } = c.req.param();
+  const { action } = await c.req.json<{ action: "sign" | "reject" }>();
+
+  const sig = await prisma.signature.findFirst({ where: { id, organizationId: orgId } });
+  if (!sig) return c.json({ error: "Not found" }, 404);
+
+  if (action === "sign") {
+    await prisma.signature.update({ where: { id }, data: { status: "signed", signedAt: new Date() } });
+  } else {
+    await prisma.signature.update({ where: { id }, data: { status: "rejected", rejectedAt: new Date() } });
+  }
+
+  const allSigs = await prisma.signature.findMany({ where: { documentId: sig.documentId, organizationId: orgId } });
+  const allSigned = allSigs.every((s) => s.status === "signed");
+  const anyRejected = allSigs.some((s) => s.status === "rejected");
+
+  if (allSigned) {
+    await prisma.document.update({ where: { id: sig.documentId }, data: { signatureState: "signed", approvalState: "signed" } });
+  } else if (anyRejected) {
+    await prisma.document.update({ where: { id: sig.documentId }, data: { signatureState: "rejected" } });
+  }
+
+  return c.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// LEGAL KNOWLEDGE BASE
+// ═══════════════════════════════════════════════════════════════
+
+data.get("/legal-references", async (c) => {
+  const orgId = c.get("orgId");
+  const refs = await prisma.legalReference.findMany({
+    where: { OR: [{ organizationId: orgId }, { organizationId: null }] },
+    orderBy: { referenceNumber: "asc" },
+  });
+  return c.json({ references: refs });
+});
+
+data.post("/legal-references", async (c) => {
+  const perm = await assertPermission(c, "compliance.manage");
+  if (perm) return perm;
+  const orgId = c.get("orgId");
+  const body = await c.req.json();
+  const ref = await prisma.legalReference.create({
+    data: { ...body, organizationId: orgId },
+  });
+  return c.json({ reference: ref });
+});
+
 export default data;

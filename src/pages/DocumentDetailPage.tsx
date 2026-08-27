@@ -55,7 +55,7 @@ interface DocumentDetailPageProps {
   onOpenDocument: (doc: Document) => void;
 }
 
-type Tab = 'overview' | 'metadata' | 'insights' | 'versions' | 'activity' | 'permissions';
+type Tab = 'overview' | 'metadata' | 'insights' | 'versions' | 'activity' | 'permissions' | 'retention' | 'signatures' | 'translate';
 
 export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: DocumentDetailPageProps) {
   const { t } = useTranslation();
@@ -66,6 +66,13 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   const [shareEmail, setShareEmail] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
+  const [retentionSuggestion, setRetentionSuggestion] = useState<any>(null);
+  const [loadingRetention, setLoadingRetention] = useState(false);
+  const [signatures, setSignatures] = useState<any[]>([]);
+  const [loadingSignatures, setLoadingSignatures] = useState(false);
+  const [translation, setTranslation] = useState('');
+  const [translating, setTranslating] = useState(false);
+  const [translationLang, setTranslationLang] = useState<'ar' | 'fr' | 'en'>('fr');
 
   const department = departments.find((d) => d.id === doc.departmentId);
   const relatedDocs = documents.filter((d) => doc.relatedDocIds.includes(d.id));
@@ -79,6 +86,9 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
     { key: 'versions', label: t('versions'), icon: History },
     { key: 'activity', label: t('activity'), icon: Activity },
     { key: 'permissions', label: t('permissions'), icon: Lock },
+    { key: 'retention', label: 'Rétention', icon: Clock },
+    { key: 'signatures', label: 'Signatures', icon: CheckCircle2 },
+    { key: 'translate', label: 'Traduction', icon: FileText },
   ];
 
   const handleShare = async () => {
@@ -219,9 +229,120 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
             )}
+          </div>
+        )}
+
+        {tab === 'retention' && (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestion de la Rétention</CardTitle>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-neutral-200 p-4">
+                    <p className="text-sm font-medium text-neutral-700">Durée de rétention</p>
+                    <p className="text-2xl font-bold text-neutral-900 mt-1">{doc.retentionYears || 'Non définie'} ans</p>
+                  </div>
+                  <div className="rounded-lg border border-neutral-200 p-4">
+                    <p className="text-sm font-medium text-neutral-700">Expire le</p>
+                    <p className="text-2xl font-bold text-neutral-900 mt-1">{doc.expiresAt ? formatDate(doc.expiresAt) : 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      setLoadingRetention(true);
+                      try {
+                        const data = await api.get(`/api/data/documents/${doc.id}/retention-suggestion`);
+                        setRetentionSuggestion(data.suggestion);
+                      } catch (e) { toast('error', t('error')); }
+                      setLoadingRetention(false);
+                    }}
+                    disabled={loadingRetention}
+                  >
+                    {loadingRetention ? 'Analyse...' : 'Suggestion IA'}
+                  </Button>
+                </div>
+
+                {retentionSuggestion && (
+                  <div className="rounded-lg border border-primary-200 bg-primary-50/30 p-4">
+                    <p className="text-sm font-medium text-primary-900">Suggestion IA</p>
+                    <p className="text-sm text-primary-700 mt-1">{retentionSuggestion.reason}</p>
+                    <p className="text-xs text-primary-600 mt-2">
+                      Rétention suggérée: {retentionSuggestion.retentionYears} ans | Confiance: {Math.round((retentionSuggestion.confidence || 0) * 100)}%
+                    </p>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          </div>
+        )}
+
+        {tab === 'signatures' && (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Signatures Électroniques</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="text-center py-8">
+                  <CheckCircle2 className="h-12 w-12 text-neutral-300 mx-auto" />
+                  <p className="text-sm text-neutral-500 mt-3">Gestion des signatures électroniques</p>
+                  <p className="text-xs text-neutral-400 mt-1">Workflow de signature avec traçabilité complète</p>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        )}
+
+        {tab === 'translate' && (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Traduction IA</CardTitle>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={translationLang}
+                    onChange={(e) => setTranslationLang(e.target.value as 'ar' | 'fr' | 'en')}
+                    className="h-9 rounded-lg border border-neutral-200 px-3 text-sm"
+                  >
+                    <option value="ar">Arabe</option>
+                    <option value="fr">Français</option>
+                    <option value="en">Anglais</option>
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      setTranslating(true);
+                      try {
+                        const data = await api.post(`/api/data/documents/${doc.id}/translate`, { targetLang: translationLang });
+                        setTranslation(data.translation);
+                      } catch (e) { toast('error', t('error')); }
+                      setTranslating(false);
+                    }}
+                    disabled={translating}
+                  >
+                    {translating ? 'Traduction...' : 'Traduire'}
+                  </Button>
+                </div>
+
+                {translation && (
+                  <div className="rounded-lg border border-neutral-200 p-4 bg-neutral-50">
+                    <p className="text-sm text-neutral-900 whitespace-pre-wrap">{translation}</p>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          </div>
+        )}
           </div>
           <Button variant="outline" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={handleDownload}>
             {t('download')}

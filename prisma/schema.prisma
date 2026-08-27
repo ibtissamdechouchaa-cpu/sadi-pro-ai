@@ -65,14 +65,18 @@ model Document {
   id                String    @id @default(uuid())
   organizationId    String
   title             String
+  description       String?
   type              String    @default("other")
   typeConfidence    Float     @default(0)
   language          String    @default("unknown")
   departmentId      String?
+  ownerUserId       String?
   classification    String    @default("internal")
   archiveState      String    @default("active")
   approvalState     String    @default("draft")
   status            String    @default("uploading")
+  priority          String    @default("medium")
+  signatureState    String    @default("not_required")
   fileSize          BigInt    @default(0)
   fileType          String?
   filePath          String?
@@ -88,9 +92,12 @@ model Document {
   embeddingCompleted Boolean  @default(false)
   relatedDocIds     String[]
   retentionYears    Int?
+  retentionReason   String?
   expiresAt         DateTime?
   legalHold         Boolean   @default(false)
   sharedWith        String[]
+  documentNumber    String?
+  issuingAuthority  String?
   metadata          Json      @default("{}")
   deletedAt         DateTime?
   createdAt         DateTime  @default(now())
@@ -100,6 +107,90 @@ model Document {
   @@index([status])
   @@index([departmentId])
   @@index([uploadedAt])
+  @@index([priority])
+  @@index([archiveState])
+  @@index([expiresAt])
+}
+
+model DocumentVersion {
+  id              String    @id @default(uuid())
+  documentId      String
+  organizationId  String
+  version         Int
+  uploadedBy      String?
+  uploadedByName  String?
+  filePath        String?
+  fileSize        BigInt    @default(0)
+  hash            String?
+  changes         String?
+  status          String    @default("active")
+  createdAt       DateTime  @default(now())
+
+  @@index([documentId])
+  @@index([organizationId])
+}
+
+model DisposalRequest {
+  id              String    @id @default(uuid())
+  documentId      String
+  organizationId  String
+  requestedBy     String
+  requestedByName String?
+  reason          String?
+  status          String    @default("pending")
+  approvedBy      String?
+  approvedByName  String?
+  approvedAt      DateTime?
+  disposedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([documentId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model LegalReference {
+  id              String    @id @default(uuid())
+  referenceNumber String
+  referenceType   String
+  title           String
+  date            DateTime?
+  subject         String?
+  description     String?
+  retentionRules  Json      @default("{}")
+  accessRules     Json      @default("{}")
+  disposalRules   Json      @default("{}")
+  archiveRules    Json      @default("{}")
+  status          String    @default("active")
+  organizationId  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([referenceType])
+  @@index([organizationId])
+}
+
+model Signature {
+  id              String    @id @default(uuid())
+  documentId      String
+  organizationId  String
+  signerId        String
+  signerName      String?
+  signerEmail     String?
+  order           Int       @default(0)
+  status          String    @default("pending")
+  signedAt        DateTime?
+  rejectedAt      DateTime?
+  rejectReason    String?
+  ipAddress       String?
+  documentVersion Int       @default(1)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([documentId])
+  @@index([organizationId])
+  @@index([status])
 }
 
 model ProcessingJob {
