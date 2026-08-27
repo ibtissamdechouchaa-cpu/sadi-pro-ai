@@ -471,7 +471,6 @@ const translations: Record<Locale, TranslationKeys> = {
     metadata: 'Metadata',
     aiInsightsDoc: 'AI Insights',
     versions: 'Versions',
-    activity: 'Activity',
     permissions: 'Permissions',
 
     retentionPolicies: 'Retention Policies',
@@ -844,7 +843,6 @@ const translations: Record<Locale, TranslationKeys> = {
     metadata: 'البيانات الوصفية',
     aiInsightsDoc: 'تحليلات الذكاء الاصطناعي',
     versions: 'الإصدارات',
-    activity: 'النشاط',
     permissions: 'الصلاحيات',
 
     retentionPolicies: 'سياسات الاحتفاظ',
@@ -1217,7 +1215,6 @@ const translations: Record<Locale, TranslationKeys> = {
     metadata: 'Métadonnées',
     aiInsightsDoc: 'Analyses IA',
     versions: 'Versions',
-    activity: 'Activité',
     permissions: 'Permissions',
 
     retentionPolicies: 'Politiques de rétention',
