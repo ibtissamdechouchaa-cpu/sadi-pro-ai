@@ -66,7 +66,7 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
   const [tab, setTab] = useState<Tab>('overview');
   const [showShare, setShowShare] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
+  
   const [confirm, setConfirm] = useState<{open:boolean; message:string; onConfirm:()=>void}>({open:false,message:'',onConfirm:()=>{}});
   const [retentionSuggestion, setRetentionSuggestion] = useState<any>(null);
   const [loadingRetention, setLoadingRetention] = useState(false);
@@ -440,77 +440,8 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
         {/* Left: document preview */}
         <div className="lg:col-span-1">
           <Card>
-            <CardBody className="flex flex-col items-center justify-center py-16">
-              {showPreview ? (
-                <div className="w-full space-y-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-neutral-900">{t('view')}</p>
-                    <button onClick={() => setShowPreview(false)} className="text-neutral-400 hover:text-neutral-600">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100">
-                        <FileText className="h-5 w-5 text-primary-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-neutral-900 truncate">{doc.title}</p>
-                        <p className="text-xs text-neutral-400">{typeConfig[doc.type].label}</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">{t('classification')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">{classificationConfig[doc.classification].label}</p>
-                      </div>
-                      <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">{t('status')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">{statusConfig[doc.status].label}</p>
-                      </div>
-                      <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">{t('documents')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">{doc.pageCount}</p>
-                      </div>
-                      <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">{t('fileSize')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">{formatBytes(doc.fileSize)}</p>
-                      </div>
-                      <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">{t('version')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">v{doc.version}</p>
-                      </div>
-                      <div className="rounded-md bg-white border border-neutral-100 p-2">
-                        <p className="text-neutral-400">{t('language')}</p>
-                        <p className="font-medium text-neutral-900 mt-0.5">{getLanguageLabel(doc.language, t)}</p>
-                      </div>
-                    </div>
-                    {doc.tags.length > 0 && (
-                      <div>
-                        <p className="text-neutral-400 text-xs mb-1">{t('tags')}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {doc.tags.map((tag) => (
-                            <span key={tag} className="rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-medium text-primary-700">#{tag}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex h-20 w-16 items-center justify-center rounded-lg bg-neutral-100">
-                    <FileText className="h-10 w-10 text-neutral-300" />
-                  </div>
-                  <p className="mt-4 text-sm font-medium text-neutral-600">{t('view')}</p>
-                  <p className="mt-1 text-xs text-neutral-400 text-center max-w-xs">
-                    {t('view')} — {doc.pageCount} {t('documents')}
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-4" icon={<FileText className="h-3.5 w-3.5" />} onClick={() => setShowPreview(true)}>
-                    {t('view')}
-                  </Button>
-                </>
-              )}
+            <CardBody className="p-3">
+              <DocumentPreview docId={doc.id} fileType={doc.fileType} title={doc.title} />
             </CardBody>
           </Card>
         </div>
@@ -590,15 +521,6 @@ export function DocumentDetailPage({ document: doc, onBack, onOpenDocument }: Do
                   {doc.tags.map((tag) => (
                     <Badge key={tag} variant="default">#{tag}</Badge>
                   ))}
-                </CardBody>
-              </Card>
-            )}
-
-            {(doc.filePath || doc.fileType) && (
-              <Card>
-                <CardHeader><CardTitle>{t('view')}</CardTitle></CardHeader>
-                <CardBody>
-                  <DocumentPreview docId={doc.id} fileType={doc.fileType} title={doc.title} />
                 </CardBody>
               </Card>
             )}

@@ -15,8 +15,29 @@ const IMAGE_TYPES = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff',
 const TEXT_TYPES = new Set(['txt', 'json', 'xml', 'csv', 'html']);
 const PDF_TYPES = new Set(['pdf']);
 
+const MIME_TO_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'text/plain': 'txt',
+  'text/csv': 'csv',
+  'text/html': 'html',
+  'application/json': 'json',
+};
+
 function getExt(fileType: string): string {
-  return (fileType || '').toLowerCase().replace(/^\./, '');
+  let ext = (fileType || '').toLowerCase().replace(/^\./, '');
+  if (MIME_TO_EXT[ext]) ext = MIME_TO_EXT[ext];
+  return ext;
 }
 
 export function DocumentPreview({ docId, fileType, title }: Props) {
