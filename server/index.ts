@@ -63,7 +63,8 @@ app.get("/api/health", async (c) => {
   try {
     const { prisma } = await import("./lib/prisma.js");
     await prisma.$queryRaw`SELECT 1`;
-    return c.json({ ok: true, db: "connected", uptime: process.uptime() });
+    const r2Configured = Boolean(process.env.R2_ENDPOINT && process.env.R2_BUCKET && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY);
+    return c.json({ ok: true, db: "connected", r2: r2Configured ? "configured" : "local-fallback", uptime: process.uptime() });
   } catch {
     return c.json({ ok: false, db: "disconnected" }, 503);
   }

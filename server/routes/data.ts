@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import { analyzeDocument, generateSearchAnswer, geminiVisionChat } from "../lib/ai.js";
 import { extractFileText } from "../lib/fileExtractor.js";
 import { assertPermission, getRole, hasPermission } from "../lib/permissions.js";
-import { uploadToR2, downloadFromR2, deleteFromR2 } from "../lib/r2.js";
+import { uploadToR2, downloadFromR2, deleteFromR2, isR2Configured } from "../lib/r2.js";
 import { generateInvoicePdf } from "../lib/invoice.js";
 
 const data = new Hono();
@@ -386,6 +386,44 @@ data.get("/preview/:docId", async (c) => {
   } catch {
     return c.json({ error: "File not found in storage" }, 404);
   }
+});
+
+// --- R2 Diagnostics (admin) ---
+data.get("/r2-status", async (c) => {
+  const orgId = c.get("orgId");
+  const role = getRole(c);
+  const hasAccess = hasPermission(role, "org.manage") || hasPermission(role, "billing.manage");
+  const endpointRaw = process.env.R2_ENDPOINT || "";
+  const bucket = process.env.R2_BUCKET || "";
+  const hasKey = Boolean(process.env.R2_ACCESS_KEY_ID);
+  const hasSecret = Boolean(process.env.R2_SECRET_ACCESS_KEY);
+  let endpointNormalized = endpointRaw.trim().replace(/\/+$/, "");
+  if (bucket && endpointNormalized.endsWith(`/${bucket}`)) endpointNormalized = endpointNormalized.slice(0, -(bucket.length + 1));
+  if (!bucket && endpointNormalized.endsWith("/sadi-pro-doc")) endpointNormalized = endpointNormalized.slice(0, -"/sadi-pro-doc".length);
+  // Try to count objects if configured
+  let probe: any = null;
+  if (isR2Configured) {
+    try {
+      const { S3Client, ListObjectsV2Command } = await import("@aws-sdk/client-s3");
+      const client = new S3Client({ region: "auto", endpoint: endpointNormalized, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID!, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY! } });
+      const res: any = await client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 1 }));
+      probe = { ok: true, keyCount: res.KeyCount ?? 0, hasContents: (res.KeyCount ?? 0) > 0 };
+    } catch (e: any) {
+      probe = { ok: false, error: e?.message || String(e) };
+    }
+  }
+  return c.json({
+    isR2Configured,
+    hasEndpoint: Boolean(endpointRaw),
+    endpointRaw,
+    endpointNormalized,
+    bucket,
+    hasKey,
+    hasSecret,
+    probe,
+    hint: !isR2Configured ? "Set on Render: R2_ENDPOINT=https://<account>.r2.cloudflarestorage.com  R2_BUCKET=sadi-pro-doc  R2_ACCESS_KEY_ID=...  R2_SECRET_ACCESS_KEY=...  (do NOT append /sadi-pro-doc to endpoint)" : undefined,
+    access: hasAccess ? "admin" : "limited",
+  });
 });
 
 // --- Trial Status ---

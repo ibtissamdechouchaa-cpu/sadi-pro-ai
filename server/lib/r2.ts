@@ -9,12 +9,28 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { promises as fs } from "fs";
 import path from "path";
 
-const R2_ENDPOINT = process.env.R2_ENDPOINT || "";
-const R2_BUCKET = process.env.R2_BUCKET || "";
+const R2_ENDPOINT_RAW = process.env.R2_ENDPOINT || "";
+const R2_BUCKET_RAW = process.env.R2_BUCKET || "";
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "";
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "";
 
+// Normalize: strip bucket path if user pasted full URL https://xxx.r2.cloudflarestorage.com/sadi-pro-doc
+const R2_ENDPOINT = (() => {
+  let ep = (R2_ENDPOINT_RAW || "").trim().replace(/\/+$/, "");
+  if (R2_BUCKET_RAW && ep.endsWith(`/${R2_BUCKET_RAW}`)) ep = ep.slice(0, -(R2_BUCKET_RAW.length + 1));
+  // Also strip generic bucket suffix for the default bucket sadi-pro-doc if raw contained it
+  if (!R2_BUCKET_RAW && ep.endsWith("/sadi-pro-doc")) ep = ep.slice(0, -"/sadi-pro-doc".length);
+  return ep;
+})();
+const R2_BUCKET = R2_BUCKET_RAW || "";
+
 export const isR2Configured = Boolean(R2_ENDPOINT && R2_BUCKET && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY);
+
+if (!isR2Configured) {
+  console.warn("[R2] NOT configured — uploads will use ephemeral local filesystem and will NOT appear in Cloudflare bucket. Set R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY on Render.");
+} else {
+  console.log(`[R2] Configured — endpoint=${R2_ENDPOINT} bucket=${R2_BUCKET}`);
+}
 
 const R2 = isR2Configured
   ? new S3Client({
