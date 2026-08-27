@@ -35,12 +35,43 @@ async function extractXlsxText(buffer: Buffer): Promise<string | null> {
   return null;
 }
 
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export async function extractFileText(
   filePath: string | null,
   fileType: string | null,
-  title: string
+  title: string,
+  metadata?: Record<string, unknown> | null
 ): Promise<{ text: string; isImage: boolean; imageData?: { base64: string; mime: string } }> {
-  if (!filePath) return { text: title, isImage: false };
+  if (!filePath) {
+    const meta = (metadata || {}) as Record<string, unknown>;
+    const html = (meta.editorHtml as string) || (meta.previewText as string) || '';
+    if (html && typeof html === 'string' && html.includes('<')) {
+      const t = htmlToText(html);
+      if (t.length > 20) return { text: `${title}\n\n${t}`.slice(0, 15000), isImage: false };
+    }
+    if (typeof html === 'string' && html.trim().length > 20) {
+      return { text: `${title}\n\n${html.trim()}`.slice(0, 15000), isImage: false };
+    }
+    const desc = (meta.description as string) || '';
+    if (desc && desc.trim().length > 10) {
+      return { text: `${title}\n\n${desc}`.slice(0, 15000), isImage: false };
+    }
+    return { text: title, isImage: false };
+  }
 
   const ext = (fileType || "").toLowerCase();
 
@@ -99,8 +130,9 @@ export async function extractFileText(
 export async function extractFileTextSimple(
   filePath: string | null,
   fileType: string | null,
-  title: string
+  title: string,
+  metadata?: Record<string, unknown> | null
 ): Promise<string> {
-  const r = await extractFileText(filePath, fileType, title);
+  const r = await extractFileText(filePath, fileType, title, metadata);
   return r.text;
 }

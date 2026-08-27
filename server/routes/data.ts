@@ -183,7 +183,7 @@ data.post("/compliance-check/:id", async (c) => {
   const { id } = c.req.param();
   const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
   if (!doc) return c.json({ error: "Not found" }, 404);
-  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
   const context = extracted.text.slice(0, 8000);
   const legalRefs = await prisma.legalReference.findMany({ where: { OR: [{ organizationId: orgId }, { organizationId: null }] }, take: 20 });
   // Simple matching: find refs whose retentionRules documentTypes intersect with doc.type/classification
@@ -502,10 +502,10 @@ async function runPipelineForDocument(doc: { id: string; title: string; organiza
           await prisma.documentSummary.create({ data: { documentId: doc.id, organizationId: orgId, level, summary: insight.summary.slice(0, level==='short'?300: level==='standard'?800:2000), keywords: insight.keywords || insight.suggestedTags || [], importantDates: insight.importantDatesDetailed || [] } });
         }
       } catch {}
-      // Create DocumentEmbedding stub (for semantic search)
+      // Create DocumentEmbedding chunks for content-aware search (used by /search/ai-answer & /documents/search)
       try {
         const chunks = extracted.text.match(/.{1,1000}/g) || [extracted.text.slice(0,1000)];
-        for (let i=0;i<Math.min(chunks.length,3);i++) {
+        for (let i=0;i<Math.min(chunks.length, 5);i++) {
           await prisma.documentEmbedding.create({ data: { documentId: doc.id, organizationId: orgId, chunkIndex: i, content: chunks[i].slice(0,1000), embedding: [] } });
         }
       } catch {}
@@ -624,7 +624,7 @@ data.get("/documents/search", async (c) => {
   const likePattern = `%${safeQ}%`;
 
   try {
-    const results = await prisma.$queryRawUnsafe(
+    const results: any[] = await prisma.$queryRawUnsafe(
       `SELECT
         id, "organizationId", title, type, "typeConfidence", language,
         "departmentId", classification, "archiveState", "approvalState",
@@ -656,6 +656,28 @@ data.get("/documents/search", async (c) => {
       LIMIT $5 OFFSET $6`,
       searchQuery, orgId, likePattern, q.slice(0, 200), limit, offset
     );
+
+    // Supplement with content matches from embeddings (body search)
+    try {
+      if (results.length < limit) {
+        const embMatches = await prisma.documentEmbedding.findMany({
+          where: { organizationId: orgId, content: { contains: q, mode: "insensitive" } },
+          take: limit,
+        });
+        const existingIds = new Set(results.map((r: any) => r.id));
+        for (const em of embMatches) {
+          if (!existingIds.has(em.documentId) && results.length < limit) {
+            const extraDoc: any = await prisma.document.findFirst({ where: { id: em.documentId, organizationId: orgId, deletedAt: null } });
+            if (extraDoc) {
+              extraDoc.rank = 0.05;
+              extraDoc.snippet = em.content.slice(0, 180);
+              results.push(extraDoc);
+              existingIds.add(em.documentId);
+            }
+          }
+        }
+      }
+    } catch {}
 
     return c.json({ results });
   } catch (err) {
@@ -1252,7 +1274,7 @@ data.post("/documents/:id/analyze", async (c) => {
   });
   if (!doc) return c.json({ error: "Document not found" }, 404);
 
-  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
   const insight = await analyzeDocument(doc.title, extracted.text, extracted.imageData);
 
   const existingMeta = (doc.metadata as Record<string, unknown>) || {};
@@ -1285,7 +1307,7 @@ data.post("/search/ai-answer", async (c) => {
   try {
     const safeQuery = query.replace(/[%_\\]/g, "\\$&").slice(0, 200);
     results = await prisma.$queryRawUnsafe(
-      `SELECT title, tags,
+      `SELECT id, title, tags, "filePath", "fileType", metadata, description, type, classification,
         ts_rank(
           to_tsvector('english', coalesce(title, '') || ' ' || coalesce(array_to_string(tags, ' '), '')),
           plainto_tsquery('english', $1)
@@ -1316,9 +1338,39 @@ data.post("/search/ai-answer", async (c) => {
     });
   }
 
-  const snippets = results.map(
-    (r: any) => `Title: ${r.title}\nTags: ${(r.tags || []).join(", ")}`
-  );
+  // Supplement with content-based matches from DocumentEmbedding (chunk content) — finds docs where body contains query
+  try {
+    const embMatches = await prisma.documentEmbedding.findMany({
+      where: { organizationId: orgId, content: { contains: query, mode: "insensitive" } },
+      take: 5,
+    });
+    const existingIds = new Set(results.map((r: any) => r.id).filter(Boolean));
+    for (const em of embMatches) {
+      if (!existingIds.has(em.documentId)) {
+        const extraDoc = await prisma.document.findFirst({ where: { id: em.documentId, organizationId: orgId, deletedAt: null } });
+        if (extraDoc) {
+          results.push(extraDoc);
+          existingIds.add(em.documentId);
+        }
+        if (results.length >= 8) break;
+      }
+    }
+  } catch {}
+
+  // Build snippets with full content (not just title/tags) — extract text for each doc
+  const snippets: string[] = [];
+  for (const r of results.slice(0, 5)) {
+    try {
+      const extracted = await extractFileText(r.filePath ?? null, r.fileType ?? null, r.title, r.metadata as Record<string, unknown>);
+      const excerpt = extracted.text.slice(0, 2500);
+      // Include description if present
+      const desc = (r.description as string) || "";
+      snippets.push(`Title: ${r.title}\nType: ${r.type || ''} Classification: ${r.classification || ''}\nTags: ${(r.tags || []).join(", ")}\nDescription: ${desc.slice(0, 300)}\nContent: ${excerpt}`);
+    } catch {
+      snippets.push(`Title: ${r.title}\nTags: ${(r.tags || []).join(", ")}`);
+    }
+  }
+  if (snippets.length === 0) snippets.push(`No documents matched query "${query}" — answer from general knowledge is allowed but note the limitation.`);
 
   const result = await generateSearchAnswer(query, snippets);
 
@@ -1326,7 +1378,7 @@ data.post("/search/ai-answer", async (c) => {
     answer: result.answer,
     reasoning: result.reasoning,
     reasoningSummary: result.reasoningSummary,
-    sources: results.map((r: any) => ({ title: r.title })),
+    sources: results.slice(0, 5).map((r: any) => ({ id: r.id, title: r.title, type: r.type })),
   });
 });
 
@@ -1359,7 +1411,7 @@ data.post("/documents/:id/process", async (c) => {
       data: { stage: "analyzing", progress: 50 },
     });
 
-    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown> | null);
     const insight = await analyzeDocument(doc.title, extracted.text, extracted.imageData);
 
     await prisma.processingJob.update({
@@ -1404,17 +1456,19 @@ data.post("/documents/:id/ask", async (c) => {
   const doc = await prisma.document.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
   if (!doc) return c.json({ error: "Document not found" }, 404);
 
-  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+  const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
 
-  // Image → Gemini Vision with reasoning
+  // Image → Gemini Vision with reasoning (include title+question as text context alongside image)
   if (extracted.isImage && extracted.imageData) {
-    const result = await geminiVisionChat(question, extracted.imageData);
+    const result = await geminiVisionChat(`${question}\n\nDocument title: ${doc.title}`, extracted.imageData);
     if (result) return c.json({ answer: result.answer, reasoning: result.reasoning, reasoningSummary: result.reasoningSummary });
   }
 
-  // Text-based → ask with reasoning
-  const context = extracted.text.slice(0, 12000);
-  const snippets = [`Title: ${doc.title}\nContent: ${context}`];
+  // Text-based → ask with reasoning — full content (up to 15k) + metadata
+  const meta = doc.metadata as Record<string, unknown>;
+  const extraMeta = [meta?.author && `Author: ${meta.author}`, meta?.organization && `Org: ${meta.organization}`, (doc as any).description && `Description: ${(doc as any).description}`].filter(Boolean).join('\n');
+  const context = extracted.text.slice(0, 15000);
+  const snippets = [`Title: ${doc.title}\n${extraMeta ? extraMeta + '\n' : ''}Content: ${context}`];
   const chatResult = await (await import("../lib/ai.js")).generateSearchAnswer(question, snippets);
   return c.json({ answer: chatResult.answer, reasoning: chatResult.reasoning, reasoningSummary: chatResult.reasoningSummary });
 });
@@ -1487,7 +1541,7 @@ data.get("/documents/:id/summary", async (c) => {
   if (!doc) return c.json({ error: "Not found" }, 404);
 
   try {
-    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
     const context = extracted.text.slice(0, 12000);
 
     const lengthGuide = level === "short" ? "2-3 sentences" : level === "detailed" ? "a comprehensive 1-paragraph summary" : "a 1-paragraph summary";
@@ -1549,7 +1603,7 @@ data.get("/documents/:id/retention-suggestion", async (c) => {
   if (!doc) return c.json({ error: "Not found" }, 404);
 
   try {
-    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
     const context = extracted.text.slice(0, 8000);
 
     const prompt = `Analyze this document and suggest a retention period. Return JSON only:
@@ -1907,7 +1961,7 @@ data.post("/documents/:id/translate", async (c) => {
   if (!doc) return c.json({ error: "Not found" }, 404);
 
   try {
-    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title);
+    const extracted = await extractFileText(doc.filePath, doc.fileType, doc.title, doc.metadata as Record<string, unknown>);
     const context = extracted.text.slice(0, 12000);
     const langNames = { ar: "Arabic", fr: "French", en: "English" };
 
