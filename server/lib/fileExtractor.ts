@@ -1,5 +1,4 @@
 import mammoth from "mammoth";
-import pdfParse from "pdf-parse";
 import { downloadFromR2 } from "./r2.js";
 
 const IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff", "tif"]);
@@ -110,7 +109,9 @@ export async function extractFileText(
   // PDF via pdf-parse (most reliable)
   if (ext === "pdf") {
     try {
-      const result = await pdfParse(buffer);
+      const pdfParse = await import("pdf-parse" as string);
+      const pdfFn = (pdfParse as any).default || (pdfParse as any).parse || pdfParse;
+      const result = await pdfFn(buffer);
       const text = result.text?.trim();
       if (text && text.length > 20) return { text: text.slice(0, 15000), isImage: false };
     } catch {}

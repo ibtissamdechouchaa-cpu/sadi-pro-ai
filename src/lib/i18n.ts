@@ -1233,7 +1233,6 @@ const translations: Record<Locale, TranslationKeys> = {
 
     organization: 'Organisation',
     billing: 'Facturation',
-    notifications: 'Notifications',
     security: 'Sécurité',
     language: 'Langue',
     currentPlan: 'Plan actuel',
@@ -1378,7 +1377,6 @@ const translations: Record<Locale, TranslationKeys> = {
     archiveTitle: 'Archive organisée, searchable et intelligente',
     archiveDesc: 'Structurez vos documents avec dossiers, versions, métadonnées, tags, politiques de rétention et permissions granulaires.',
     versionControl: 'Contrôle de version',
-    metadata: 'Métadonnées',
     smartTags: 'Tags intelligents',
     retention: 'Politiques de rétention',
     fullTextSearch: 'Recherche plein texte',
@@ -1471,7 +1469,6 @@ const translations: Record<Locale, TranslationKeys> = {
     translateToArabic: 'Traduire en arabe',
     translateToFrench: 'Traduire en français',
     translateToEnglish: 'Traduire en anglais',
-    reports: 'Rapports',
     expiringDocs: 'Documents expirant bientôt',
     critical: 'CRITIQUE',
     high: 'ÉLEVÉ',
