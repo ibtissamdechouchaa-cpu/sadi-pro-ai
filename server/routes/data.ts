@@ -6,7 +6,7 @@ import { analyzeDocument, generateSearchAnswer, geminiVisionChat } from "../lib/
 import { extractFileText } from "../lib/fileExtractor.js";
 import { assertPermission, getRole, hasPermission } from "../lib/permissions.js";
 import { uploadToR2, downloadFromR2, deleteFromR2, isR2Configured } from "../lib/r2.js";
-import fs from "fs";
+import { existsSync, readFileSync } from "fs";
 import { generateInvoicePdf } from "../lib/invoice.js";
 
 const data = new Hono();
@@ -396,8 +396,18 @@ data.get("/preview/:docId", async (c) => {
 // --- R2 Diagnostics (admin) — also readable as /api/r2-status without auth (see server/index.ts) ---
 function readSecretData(name: string): string {
   if (process.env[name]) return process.env[name] as string;
-  try { const p = `/etc/secrets/${name}`; if (fs.existsSync(p)) return fs.readFileSync(p, "utf8").trim(); } catch {}
-  try { const p2 = `/etc/secrets/${name}.txt`; if (fs.existsSync(p2)) return fs.readFileSync(p2, "utf8").trim(); } catch {}
+  try { const p = `/etc/secrets/${name}`; if (existsSync(p)) return readFileSync(p, "utf8").trim(); } catch {}
+  try { const p2 = `/etc/secrets/${name}.txt`; if (existsSync(p2)) return readFileSync(p2, "utf8").trim(); } catch {}
+  for (const fname of ["r2-secrets.env", ".env", "secrets.env"]) {
+    try {
+      const p3 = `/etc/secrets/${fname}`;
+      if (existsSync(p3)) {
+        const c = readFileSync(p3, "utf8");
+        const m = c.match(new RegExp(`^${name}=([^\r\n]+)`, "m"));
+        if (m) return m[1].trim().replace(/^["']|["']$/g, "");
+      }
+    } catch {}
+  }
   return "";
 }
 data.get("/r2-status", async (c) => {

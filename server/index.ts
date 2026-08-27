@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { webcrypto } from "node:crypto";
-import fs from "fs";
+import { existsSync, readFileSync } from "fs";
 
 if (typeof globalThis.crypto === "undefined") {
   (globalThis as any).crypto = webcrypto;
@@ -73,10 +73,23 @@ app.get("/api/health", async (c) => {
 
 function readSecretForStatus(name: string): string {
   if (process.env[name]) return process.env[name] as string;
-  try { const p = `/etc/secrets/${name}`; if (fs.existsSync(p)) return fs.readFileSync(p, "utf8").trim(); } catch {}
-  try { const p2 = `/etc/secrets/${name}.txt`; if (fs.existsSync(p2)) return fs.readFileSync(p2, "utf8").trim(); } catch {}
+  try { const p = `/etc/secrets/${name}`; if (existsSync(p)) return readFileSync(p, "utf8").trim(); } catch {}
+  try { const p2 = `/etc/secrets/${name}.txt`; if (existsSync(p2)) return readFileSync(p2, "utf8").trim(); } catch {}
+  for (const fname of ["r2-secrets.env", ".env", "secrets.env"]) {
+    try {
+      const p3 = `/etc/secrets/${fname}`;
+      if (existsSync(p3)) {
+        const c = readFileSync(p3, "utf8");
+        const m = c.match(new RegExp(`^${name}=([^\r\n]+)`, "m"));
+        if (m) return m[1].trim().replace(/^["']|["']$/g, "");
+      }
+    } catch {}
+  }
   return "";
 }
+process.on('unhandledRejection', (reason) => console.error('[unhandledRejection]', reason));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
+
 app.get("/api/r2-status", async (c) => {
   c.header("Cache-Control", "no-store");
   const endpointRaw = readSecretForStatus("R2_ENDPOINT");

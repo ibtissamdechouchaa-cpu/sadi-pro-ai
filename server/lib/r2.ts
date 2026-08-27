@@ -7,22 +7,30 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { promises as fs } from "fs";
-import fsSync from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 
 function readSecret(name: string): string {
-  // 1) Env var (normal)
   if (process.env[name]) return process.env[name] as string;
-  // 2) Render Secret File at /etc/secrets/<name> (Render Secret Files feature)
   try {
     const p = path.join("/etc/secrets", name);
-    if (fsSync.existsSync(p)) return fsSync.readFileSync(p, "utf8").trim();
+    if (existsSync(p)) return readFileSync(p, "utf8").trim();
   } catch {}
-  // 3) Also support lowercase file with .txt suffix
   try {
     const p2 = path.join("/etc/secrets", `${name}.txt`);
-    if (fsSync.existsSync(p2)) return fsSync.readFileSync(p2, "utf8").trim();
+    if (existsSync(p2)) return readFileSync(p2, "utf8").trim();
   } catch {}
+  // Also support combined secret file r2-secrets.env at /etc/secrets/r2-secrets.env or .env
+  for (const fname of ["r2-secrets.env", ".env", "secrets.env"]) {
+    try {
+      const p3 = path.join("/etc/secrets", fname);
+      if (existsSync(p3)) {
+        const content = readFileSync(p3, "utf8");
+        const m = content.match(new RegExp(`^${name}=([^\r\n]+)`, "m"));
+        if (m) return m[1].trim().replace(/^["']|["']$/g, "");
+      }
+    } catch {}
+  }
   return "";
 }
 
