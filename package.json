@@ -11,7 +11,7 @@
     "dev:server": "npx tsx server/index.ts",
     "dev:all": "node dev.mjs",
     "build": "vite build",
-    "start": "prisma db push --accept-data-loss && npx tsx server/index.ts",
+    "start": "prisma db push --accept-data-loss && npx tsx prisma/seed.ts && npx tsx server/index.ts",
     "postinstall": "prisma generate",
     "lint": "eslint .",
     "preview": "vite preview",
