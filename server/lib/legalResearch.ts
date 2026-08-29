@@ -229,6 +229,47 @@ export async function searchLegalKnowledgeBase(
 
   scored.sort((a, b) => b.rawScore - a.rawScore);
 
+  if (scored.length === 0 && references.length > 0) {
+    for (const ref of references) {
+      const relatedTexts: Array<{ referenceNumber: string; relationType: string }> = [];
+      for (const rel of ref.outgoingRelations) {
+        if (rel.targetReference) relatedTexts.push({ referenceNumber: rel.targetReference.referenceNumber, relationType: rel.relationType });
+      }
+      for (const rel of ref.incomingRelations) {
+        if (rel.sourceReference) relatedTexts.push({ referenceNumber: rel.sourceReference.referenceNumber, relationType: rel.relationType });
+      }
+      scored.push({
+        referenceNumber: ref.referenceNumber,
+        titleAr: ref.titleAr || "",
+        titleFr: ref.titleFr || "",
+        titleEn: ref.titleEn || ref.title || "",
+        type: ref.referenceType,
+        jurisdiction: ref.jurisdiction || "Algeria",
+        issuingAuthority: ref.issuingAuthority || "",
+        publicationDate: ref.publicationDate?.toISOString() ?? null,
+        officialSource: ref.officialSource || "",
+        sourceUrl: ref.sourceUrl || "",
+        status: ref.status,
+        summaryAr: ref.summaryAr || "",
+        keywords: ref.keywords,
+        domain: ref.domain,
+        relevanceScore: 5,
+        confidence: 0.3,
+        articles: ref.articles.map((a) => ({
+          articleNumber: a.articleNumber,
+          title: a.title || "",
+          textAr: a.textAr || "",
+          obligations: a.obligations,
+          prohibitions: a.prohibitions,
+          permissions: a.permissions,
+        })),
+        relatedTexts,
+        rawScore: 5,
+      });
+    }
+    scored.sort((a, b) => b.rawScore - a.rawScore);
+  }
+
   return scored.slice(0, limit);
 }
 
