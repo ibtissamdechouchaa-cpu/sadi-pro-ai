@@ -18,11 +18,174 @@ import {
   saveSearchHistory,
   getSearchHistory,
 } from "../lib/legalResearch.js";
+import {
+  searchInternetLegal,
+  scrapeLegalDocument,
+  getAvailableSources,
+} from "../lib/webScraper.js";
 import { randomUUID } from "crypto";
 
 const compliance = new Hono();
 
 compliance.use("*", authMiddleware);
+
+// ============================================
+// INTERNET LEGAL SEARCH
+// ============================================
+
+compliance.get("/internet-search/sources", async (c) => {
+  try {
+    const sources = getAvailableSources();
+    return c.json({ sources });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+compliance.post("/internet-search", async (c) => {
+  try {
+    const orgId = c.get("orgId");
+    const userId = c.get("userId");
+    const body = await c.req.json<{
+      query: string;
+      sources?: string[];
+      maxResults?: number;
+      importResults?: boolean;
+    }>();
+
+    if (!body.query?.trim()) {
+      return c.json({ error: "query is required" }, 400);
+    }
+
+    const webResults = await searchInternetLegal(body.query, {
+      sources: body.sources,
+      maxResults: body.maxResults,
+    });
+
+    let importedCount = 0;
+    let duplicateCount = 0;
+
+    if (body.importResults && webResults.results.length > 0) {
+      for (const result of webResults.results) {
+        const lawNum = result.title.match(
+          /(\d{2,3}[-–]\d{2})/
+        );
+        if (lawNum) {
+          const importResult = await importLegalReference(
+            prisma,
+            {
+              referenceNumber: lawNum[1].replace("–", "-"),
+              title: result.title,
+              referenceType: result.type === "other" ? "other" : result.type,
+              officialSource: result.source,
+              sourceUrl: result.url,
+              publicationDate: result.date ? new Date(result.date) : undefined,
+              domain: "OTHER",
+            },
+            orgId,
+            userId
+          );
+          if (importResult.isDuplicate) {
+            duplicateCount++;
+          } else {
+            importedCount++;
+          }
+        }
+      }
+    }
+
+    await saveSearchHistory(
+      prisma,
+      userId,
+      orgId,
+      `[WEB] ${body.query}`,
+      { sources: body.sources, maxResults: body.maxResults },
+      webResults.results.length,
+      webResults.searchedSources
+    ).catch(() => {});
+
+    return c.json({
+      results: webResults.results,
+      searchedSources: webResults.searchedSources,
+      errors: webResults.errors,
+      imported: importedCount,
+      duplicates: duplicateCount,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+compliance.post("/internet-search/scrape", async (c) => {
+  try {
+    const body = await c.req.json<{ url: string }>();
+    if (!body.url?.trim()) {
+      return c.json({ error: "url is required" }, 400);
+    }
+
+    const doc = await scrapeLegalDocument(body.url);
+    if (!doc) {
+      return c.json({ error: "Failed to scrape document" }, 404);
+    }
+
+    return c.json({ document: doc });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+compliance.post("/internet-search/import-scraped", async (c) => {
+  try {
+    const perm = await assertPermission(c, "compliance.manage");
+    if (perm) return perm;
+    const orgId = c.get("orgId");
+    const userId = c.get("userId");
+
+    const body = await c.req.json<{
+      url: string;
+      domain?: string;
+    }>();
+
+    if (!body.url?.trim()) {
+      return c.json({ error: "url is required" }, 400);
+    }
+
+    const doc = await scrapeLegalDocument(body.url);
+    if (!doc) {
+      return c.json({ error: "Failed to scrape document" }, 404);
+    }
+
+    const result = await importLegalReference(
+      prisma,
+      {
+        referenceNumber: doc.referenceNumber,
+        title: doc.title,
+        titleAr: doc.titleAr,
+        referenceType: doc.referenceType,
+        officialSource: doc.source,
+        sourceUrl: doc.url,
+        fullText: doc.fullText,
+        publicationDate: doc.publicationDate ? new Date(doc.publicationDate) : undefined,
+        keywords: doc.keywords,
+        domain: body.domain || "OTHER",
+      },
+      orgId,
+      userId
+    );
+
+    return c.json({
+      id: result.id,
+      isDuplicate: result.isDuplicate,
+      document: doc,
+    }, result.isDuplicate ? 200 : 201);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 500);
+  }
+});
 
 // ============================================
 // LEGAL KNOWLEDGE BASE

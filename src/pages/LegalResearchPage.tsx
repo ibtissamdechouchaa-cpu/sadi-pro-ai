@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   BookOpen,
   Shield,
+  Globe,
 } from 'lucide-react';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -25,7 +26,7 @@ import { api } from '@/lib/api';
 import { useTranslation } from '@/lib/i18n';
 import { cn, formatDate } from '@/lib/utils';
 
-type SearchMode = 'quick' | 'deep' | 'related' | 'retention';
+type SearchMode = 'quick' | 'deep' | 'related' | 'retention' | 'internet';
 
 const DOMAIN_OPTIONS = [
   { value: 'ALL', labelAr: 'جميع المجالات', labelFr: 'Tous les domaines', labelEn: 'All Domains' },
@@ -54,6 +55,11 @@ export function LegalResearchPage() {
   const [importing, setImporting] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [domainDropdownOpen, setDomainDropdownOpen] = useState(false);
+  const [webResults, setWebResults] = useState<any[]>([]);
+  const [webSearchLoading, setWebSearchLoading] = useState(false);
+  const [webImporting, setWebImporting] = useState<number | null>(null);
+  const [webSearchErrors, setWebSearchErrors] = useState<string[]>([]);
+  const [importedCount, setImportedCount] = useState(0);
 
   const langLabel = (opt: { labelAr: string; labelFr: string; labelEn: string }) =>
     locale === 'ar' ? opt.labelAr : locale === 'fr' ? opt.labelFr : opt.labelEn;
@@ -77,27 +83,6 @@ export function LegalResearchPage() {
     loadHistory();
   }, [loadStats, loadHistory]);
 
-  const doSearch = useCallback(async () => {
-    if (!query.trim()) {
-      toast('warning', locale === 'ar' ? 'الرجاء إدخال كلمة للبحث' : locale === 'fr' ? 'Veuillez entrer un terme de recherche' : 'Please enter a search term');
-      return;
-    }
-    setLoading(true);
-    setSelectedResult(null);
-    try {
-      const data = await api.post('/api/compliance/legal-research', { query: query.trim(), mode: searchMode, domain: domain === 'ALL' ? undefined : domain });
-      setResults(data.results || []);
-      if (data.results && data.results.length === 0) {
-        toast('info', locale === 'ar' ? 'لم يتم العثور على نتائج' : locale === 'fr' ? 'Aucun résultat trouvé' : 'No results found');
-      }
-      await api.post('/api/compliance/legal-research/history', { query: query.trim(), mode: searchMode, domain, resultCount: data.results?.length || 0 }).catch(() => {});
-      loadHistory();
-    } catch (e: unknown) {
-      toast('error', e instanceof Error ? e.message : t('error'));
-    }
-    setLoading(false);
-  }, [query, searchMode, domain, toast, locale, t, loadHistory]);
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') doSearch();
   };
@@ -119,11 +104,115 @@ export function LegalResearchPage() {
     if (selectedResult?.id === id) setSelectedResult(null);
   };
 
+  const doWebSearch = useCallback(async () => {
+    if (!query.trim()) {
+      toast('warning', locale === 'ar' ? 'الرجاء إدخال كلمة للبحث' : locale === 'fr' ? 'Veuillez entrer un terme de recherche' : 'Please enter a search term');
+      return;
+    }
+    setWebSearchLoading(true);
+    setWebResults([]);
+    setWebSearchErrors([]);
+    setImportedCount(0);
+    try {
+      const data = await api.post('/api/compliance/internet-search', {
+        query: query.trim(),
+        sources: ['SGG', 'LEGAL_PORTAL', 'LEGISLATION_DZ'],
+        maxResults: 20,
+        importResults: false,
+      });
+      setWebResults(data.results || []);
+      setWebSearchErrors(data.errors || []);
+      if (data.results && data.results.length === 0) {
+        toast('info', locale === 'ar' ? 'لم يتم العثور على نتائج في الإنترنت' : locale === 'fr' ? 'Aucun résultat trouvé sur Internet' : 'No results found on the Internet');
+      }
+      await api.post('/api/compliance/legal-research/history', {
+        query: query.trim(),
+        mode: 'internet',
+        resultCount: data.results?.length || 0,
+      }).catch(() => {});
+      loadHistory();
+    } catch (e: unknown) {
+      toast('error', e instanceof Error ? e.message : t('error'));
+    }
+    setWebSearchLoading(false);
+  }, [query, toast, locale, t, loadHistory]);
+
+  const importWebResult = useCallback(async (result: any, index: number) => {
+    setWebImporting(index);
+    try {
+      const titleMatch = result.title.match(/(\d{2,3}[-–]\d{2})/);
+      await api.post('/api/compliance/legal-research/import', {
+        referenceNumber: titleMatch ? titleMatch[1].replace('–', '-') : `WEB-${Date.now()}`,
+        title: result.title,
+        referenceType: result.type === 'other' ? 'other' : result.type,
+        officialSource: result.source,
+        sourceUrl: result.url,
+        publicationDate: result.date,
+        domain: 'OTHER',
+      });
+      setImportedCount((c) => c + 1);
+      toast('success', locale === 'ar' ? 'تمت الاستيراد إلى قاعدة المعرفة' : locale === 'fr' ? 'Importé dans la base' : 'Imported to Knowledge Base');
+      loadStats();
+    } catch (e: unknown) {
+      toast('error', e instanceof Error ? e.message : t('error'));
+    }
+    setWebImporting(null);
+  }, [toast, locale, t, loadStats]);
+
+  const importAllWebResults = useCallback(async () => {
+    setWebSearchLoading(true);
+    try {
+      const data = await api.post('/api/compliance/internet-search', {
+        query: query.trim(),
+        sources: ['SGG', 'LEGAL_PORTAL', 'LEGISLATION_DZ'],
+        maxResults: 20,
+        importResults: true,
+      });
+      setImportedCount(data.imported || 0);
+      toast('success', locale === 'ar'
+        ? `تم استيراد ${data.imported || 0} مرجع إلى قاعدة المعرفة`
+        : locale === 'fr'
+          ? `${data.imported || 0} références importées dans la base`
+          : `${data.imported || 0} references imported to Knowledge Base`);
+      loadStats();
+    } catch (e: unknown) {
+      toast('error', e instanceof Error ? e.message : t('error'));
+    }
+    setWebSearchLoading(false);
+  }, [query, toast, locale, t, loadStats]);
+
+  const doSearch = useCallback(async () => {
+    if (!query.trim()) {
+      toast('warning', locale === 'ar' ? 'الرجاء إدخال كلمة للبحث' : locale === 'fr' ? 'Veuillez entrer un terme de recherche' : 'Please enter a search term');
+      return;
+    }
+
+    if (searchMode === 'internet') {
+      return doWebSearch();
+    }
+
+    setLoading(true);
+    setSelectedResult(null);
+    try {
+      const data = await api.post('/api/compliance/legal-research', { query: query.trim(), mode: searchMode, domain: domain === 'ALL' ? undefined : domain });
+      setResults(data.results || []);
+      if (data.results && data.results.length === 0) {
+        toast('info', locale === 'ar' ? 'لم يتم العثور على نتائج' : locale === 'fr' ? 'Aucun résultat trouvé' : 'No results found');
+      }
+      await api.post('/api/compliance/legal-research/history', { query: query.trim(), mode: searchMode, domain, resultCount: data.results?.length || 0 }).catch(() => {});
+      loadHistory();
+    } catch (e: unknown) {
+      toast('error', e instanceof Error ? e.message : t('error'));
+    }
+    setLoading(false);
+  }, [query, searchMode, domain, toast, locale, t, loadHistory, doWebSearch]);
+
   const searchModes = [
     { key: 'quick' as const, labelAr: 'بحث سريع', labelFr: 'Recherche rapide', labelEn: 'Quick Search' },
     { key: 'deep' as const, labelAr: 'بحث عميق', labelFr: 'Recherche approfondie', labelEn: 'Deep Research' },
     { key: 'related' as const, labelAr: 'بحث ذات صلة', labelFr: 'Trouver lié', labelEn: 'Find Related' },
     { key: 'retention' as const, labelAr: 'قواعد الاحتفاظ', labelFr: 'Règles de rétention', labelEn: 'Find Retention Rules' },
+    { key: 'internet' as const, labelAr: 'بحث في الإنترنت', labelFr: 'Recherche Internet', labelEn: 'Internet Search', icon: '🌐' },
   ];
 
   const getRelevanceColor = (score: number): string => {
@@ -136,7 +225,7 @@ export function LegalResearchPage() {
   const getRefTypeBadge = (type: string) => {
     switch (type) {
       case 'law':
-        return { variant: 'primary' as const, labelAr: 'قانون', labelFr: 'Loi', labelEn: 'Law' };
+        return { variant: 'info' as const, labelAr: 'قانون', labelFr: 'Loi', labelEn: 'Law' };
       case 'circular':
         return { variant: 'warning' as const, labelAr: 'منشور', labelFr: 'Circulaire', labelEn: 'Circular' };
       case 'standard':
@@ -394,6 +483,127 @@ export function LegalResearchPage() {
             </Card>
           );
         })}
+      </div>
+    );
+  };
+
+  const renderWebResults = () => {
+    if (searchMode !== 'internet') return null;
+
+    if (webSearchLoading) {
+      return (
+        <Card>
+          <CardBody>
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+              <p className="mt-3 text-sm text-neutral-500">
+                {locale === 'ar' ? 'جاري البحث في الإنترنت...' : locale === 'fr' ? 'Recherche sur Internet...' : 'Searching the Internet...'}
+              </p>
+            </div>
+          </CardBody>
+        </Card>
+      );
+    }
+
+    if (webResults.length === 0 && !webSearchLoading) {
+      return (
+        <Card>
+          <EmptyState
+            icon={<Globe className="h-8 w-8" />}
+            title={locale === 'ar' ? 'بحث في المصادر القانونية على الإنترنت' : locale === 'fr' ? 'Recherche dans les sources juridiques en ligne' : 'Search Online Legal Sources'}
+            description={
+              locale === 'ar'
+                ? 'ابحث في الجريدة الرسمية والبوابة القانونية وقاعدة البيانات التشريعية'
+                : locale === 'fr'
+                  ? 'Recherchez dans le Journal Officiel, le portail juridique et la base de données législative'
+                  : 'Search the Official Gazette, Legal Portal and Legislation Database'
+            }
+          />
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-neutral-500">
+            {webResults.length} {locale === 'ar' ? 'نتيجة من الإنترنت' : locale === 'fr' ? 'résultats en ligne' : 'web results'}
+            {importedCount > 0 && (
+              <span className="ms-2 text-success-600 font-medium">
+                · {importedCount} {locale === 'ar' ? 'تم استيرادها' : locale === 'fr' ? 'importées' : 'imported'}
+              </span>
+            )}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={<Download className="h-3.5 w-3.5" />}
+            onClick={importAllWebResults}
+            isLoading={webSearchLoading}
+          >
+            {locale === 'ar' ? 'استيراد الكل' : locale === 'fr' ? 'Tout importer' : 'Import All'}
+          </Button>
+        </div>
+
+        {webSearchErrors.length > 0 && (
+          <div className="rounded-lg bg-warning-50 border border-warning-200 p-3">
+            <p className="text-xs font-medium text-warning-700 mb-1">
+              {locale === 'ar' ? 'أخطاء في البحث:' : locale === 'fr' ? 'Erreurs de recherche:' : 'Search errors:'}
+            </p>
+            {webSearchErrors.map((err, i) => (
+              <p key={i} className="text-xs text-warning-600">{err}</p>
+            ))}
+          </div>
+        )}
+
+        {webResults.map((result, idx) => (
+          <Card key={idx} hover>
+            <CardBody>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={result.type === 'law' ? 'info' : result.type === 'decree' ? 'warning' : 'neutral'}>
+                      {result.type === 'law' ? (locale === 'ar' ? 'قانون' : 'Loi') : result.type === 'decree' ? (locale === 'ar' ? 'مرسوم' : 'Décret') : result.type === 'circular' ? (locale === 'ar' ? 'تعميم' : 'Circulaire') : result.type}
+                    </Badge>
+                    <Badge variant="info" dot>
+                      {result.source}
+                    </Badge>
+                    {result.date && (
+                      <Badge variant="neutral">{result.date}</Badge>
+                    )}
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-neutral-900 leading-snug">{result.title}</h3>
+                  {result.snippet && (
+                    <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed line-clamp-3">{result.snippet}</p>
+                  )}
+                  {result.url && (
+                    <a
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {locale === 'ar' ? 'فتح في الموقع' : locale === 'fr' ? 'Ouvrir le site' : 'Open source'}
+                    </a>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<Download className="h-3.5 w-3.5" />}
+                    onClick={() => importWebResult(result, idx)}
+                    isLoading={webImporting === idx}
+                  >
+                    {locale === 'ar' ? 'استيراد' : locale === 'fr' ? 'Importer' : 'Import'}
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+        ))}
       </div>
     );
   };
@@ -693,7 +903,7 @@ export function LegalResearchPage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_280px]">
         <div className="space-y-4">
-          {renderResultsSection()}
+          {searchMode === 'internet' ? renderWebResults() : renderResultsSection()}
           {renderHistory()}
         </div>
         <div>{renderStatsSidebar()}</div>

@@ -102,7 +102,7 @@ export function Topbar({ onToggleSidebar, onNavigate }: TopbarProps) {
                       key={n.id}
                       onClick={() => markNotificationRead(n.id)}
                       className={cn(
-                        'flex w-full items-start gap-3 border-b border-neutral-50 px-4 py-3 text-left hover:bg-neutral-50 transition-colors',
+                        'flex w-full items-start gap-3 border-b border-neutral-50 px-4 py-3 hover:bg-neutral-50 transition-colors',
                         !n.read && 'bg-primary-50/30'
                       )}
                     >
