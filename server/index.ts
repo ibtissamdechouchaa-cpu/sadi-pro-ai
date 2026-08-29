@@ -16,6 +16,7 @@ import { cors } from "hono/cors";
 import { serveStatic } from "@hono/node-server/serve-static";
 import authRoutes from "./routes/auth.js";
 import dataRoutes from "./routes/data.js";
+import complianceRoutes from "./routes/compliance.js";
 import { rateLimit, trackSession } from "./lib/rateLimit.js";
 
 const app = new Hono();
@@ -135,6 +136,7 @@ app.get("/api/ai-status", async (c) => {
 
 app.route("/api/auth", authRoutes);
 app.route("/api/data", dataRoutes);
+app.route("/api/compliance", complianceRoutes);
 
 if (process.env.NODE_ENV === "production") {
   // Serve built assets first — explicit /assets/* before the SPA fallback,

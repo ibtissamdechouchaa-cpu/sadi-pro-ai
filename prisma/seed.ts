@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/security";
+import { seedLegalData } from "./seed-legal.js";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -165,6 +166,8 @@ async function main() {
   });
 
   console.log("Retention policies created");
+
+  await seedLegalData(prisma);
 
   console.log("Seeding completed!");
 }

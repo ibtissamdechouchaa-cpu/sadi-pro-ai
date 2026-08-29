@@ -17,6 +17,7 @@ import {
   Activity,
   Workflow,
   BookOpen,
+  Scale,
 } from 'lucide-react';
 
 export type PageKey =
@@ -27,6 +28,7 @@ export type PageKey =
   | 'processing'
   | 'workflows'
   | 'compliance'
+  | 'legal-research'
   | 'team'
   | 'analytics'
   | 'reports'
@@ -52,6 +54,7 @@ const navItemsConfig: { key: PageKey; labelKey: string; fallback: string; icon: 
   { key: 'processing', labelKey: 'processing', fallback: 'Processing', icon: Cpu },
   { key: 'workflows', labelKey: 'workflows', fallback: 'Workflows', icon: Workflow },
   { key: 'compliance', labelKey: 'compliance', fallback: 'Compliance', icon: Shield },
+  { key: 'legal-research', labelKey: 'legalResearch', fallback: 'Legal Research', icon: Scale },
   { key: 'team', labelKey: 'team', fallback: 'Team & Roles', icon: Users },
   { key: 'analytics', labelKey: 'analytics', fallback: 'Analytics', icon: BarChart3 },
   { key: 'reports', labelKey: 'reports', fallback: 'Reports', icon: FileText },

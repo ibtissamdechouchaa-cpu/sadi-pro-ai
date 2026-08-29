@@ -29,32 +29,32 @@ model Organization {
 }
 
 model Profile {
-  id              String    @id
-  organizationId  String?
-  email           String    @unique
-  fullName        String
-  avatarUrl       String?
-  avatarColor     String    @default("#2563eb")
-  role            String    @default("viewer")
-  departmentId    String?
-  isActive        Boolean   @default(true)
-  passwordHash    String
-  lastLoginAt     DateTime?
-  language        String    @default("en")
-  timezone        String    @default("UTC")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id
+  organizationId String?
+  email          String    @unique
+  fullName       String
+  avatarUrl      String?
+  avatarColor    String    @default("#2563eb")
+  role           String    @default("viewer")
+  departmentId   String?
+  isActive       Boolean   @default(true)
+  passwordHash   String
+  lastLoginAt    DateTime?
+  language       String    @default("en")
+  timezone       String    @default("UTC")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Department {
-  id              String    @id @default(uuid())
-  organizationId  String
-  name            String
-  color           String    @default("#2563eb")
-  parentId        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  color          String    @default("#2563eb")
+  parentId       String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -62,52 +62,53 @@ model Department {
 }
 
 model Document {
-  id                String    @id @default(uuid())
-  organizationId    String
-  title             String
-  description       String?
-  type              String    @default("other")
-  typeConfidence    Float     @default(0)
-  language          String    @default("unknown")
-  departmentId      String?
-  ownerUserId       String?
-  classification    String    @default("internal")
-  archiveState      String    @default("active")
-  approvalState     String    @default("draft")
-  status            String    @default("uploading")
-  priority          String    @default("medium")
-  signatureState    String    @default("not_required")
-  fileSize          BigInt    @default(0)
-  fileType          String?
-  filePath          String?
-  storageBucket     String    @default("documents")
-  uploadedBy        String?
-  uploadedAt        DateTime  @default(now())
-  modifiedAt        DateTime  @default(now())
-  tags              String[]
-  version           Int       @default(1)
-  hash              String?
-  pageCount         Int       @default(0)
-  ocrCompleted      Boolean   @default(false)
-  embeddingCompleted Boolean  @default(false)
-  relatedDocIds     String[]
-  retentionYears    Int?
-  retentionReason   String?
-  expiresAt         DateTime?
-  legalHold         Boolean   @default(false)
-  sharedWith        String[]
-  documentNumber    String?
-  issuingAuthority  String?
-  documentDate      DateTime?
-  notes             String?
-  contractNumber    String?
-  institution       String?
-  legalValue        String?   // high / medium / low / permanent
-  historicalValue   String?
-  sourceLanguage    String?
-  metadata          Json      @default("{}")
-  deletedAt         DateTime?
-  createdAt         DateTime  @default(now())
+  id                 String    @id @default(uuid())
+  organizationId     String
+  title              String
+  description        String?
+  type               String    @default("other")
+  typeConfidence     Float     @default(0)
+  language           String    @default("unknown")
+  departmentId       String?
+  ownerUserId        String?
+  classification     String    @default("internal")
+  archiveState       String    @default("active")
+  approvalState      String    @default("draft")
+  status             String    @default("uploading")
+  priority           String    @default("medium")
+  signatureState     String    @default("not_required")
+  fileSize           BigInt    @default(0)
+  fileType           String?
+  filePath           String?
+  storageBucket      String    @default("documents")
+  uploadedBy         String?
+  uploadedAt         DateTime  @default(now())
+  modifiedAt         DateTime  @default(now())
+  tags               String[]
+  version            Int       @default(1)
+  hash               String?
+  pageCount          Int       @default(0)
+  ocrCompleted       Boolean   @default(false)
+  embeddingCompleted Boolean   @default(false)
+  relatedDocIds      String[]
+  retentionYears     Int?
+  retentionReason    String?
+  expiresAt          DateTime?
+  legalHold          Boolean   @default(false)
+  legalHoldRecordId  String?
+  sharedWith         String[]
+  documentNumber     String?
+  issuingAuthority   String?
+  documentDate       DateTime?
+  notes              String?
+  contractNumber     String?
+  institution        String?
+  legalValue         String? // high / medium / low / permanent
+  historicalValue    String?
+  sourceLanguage     String?
+  metadata           Json      @default("{}")
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
 
   @@index([organizationId])
   @@index([organizationId, deletedAt])
@@ -120,37 +121,45 @@ model Document {
 }
 
 model DocumentVersion {
-  id              String    @id @default(uuid())
-  documentId      String
-  organizationId  String
-  version         Int
-  uploadedBy      String?
-  uploadedByName  String?
-  filePath        String?
-  fileSize        BigInt    @default(0)
-  hash            String?
-  changes         String?
-  status          String    @default("active")
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  documentId     String
+  organizationId String
+  version        Int
+  uploadedBy     String?
+  uploadedByName String?
+  filePath       String?
+  fileSize       BigInt   @default(0)
+  hash           String?
+  changes        String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
 
   @@index([documentId])
   @@index([organizationId])
 }
 
 model DisposalRequest {
-  id              String    @id @default(uuid())
-  documentId      String
-  organizationId  String
-  requestedBy     String
-  requestedByName String?
-  reason          String?
-  status          String    @default("pending")
-  approvedBy      String?
-  approvedByName  String?
-  approvedAt      DateTime?
-  disposedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  documentId        String
+  organizationId    String
+  requestedBy       String
+  requestedByName   String?
+  reason            String?
+  retentionPolicyId String?
+  legalBasis        String?
+  expirationDate    DateTime?
+  status            String    @default("pending") // pending | approved | rejected | disposed | cancelled
+  approvedBy        String?
+  approvedByName    String?
+  approvedAt        DateTime?
+  disposedAt        DateTime?
+  disposalMethod    String?
+  certificateNumber String?
+  reviewerId        String?
+  reviewerName      String?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([documentId])
   @@index([organizationId])
@@ -158,81 +167,449 @@ model DisposalRequest {
 }
 
 model LegalReference {
-  id              String    @id @default(uuid())
-  referenceNumber String
-  referenceType   String
-  title           String
-  date            DateTime?
-  subject         String?
-  description     String?
-  retentionRules  Json      @default("{}")
-  accessRules     Json      @default("{}")
-  disposalRules   Json      @default("{}")
-  archiveRules    Json      @default("{}")
-  status          String    @default("active")
-  organizationId  String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                    String    @id @default(uuid())
+  referenceNumber       String
+  referenceType         String // law | decree | ministerial_decision | circular | instruction | international_standard | internal_policy
+  title                 String
+  titleAr               String?
+  titleFr               String?
+  titleEn               String?
+  jurisdiction          String    @default("Algeria")
+  issuingAuthority      String?
+  publicationDate       DateTime?
+  effectiveDate         DateTime?
+  officialGazetteNumber String?
+  officialGazetteDate   DateTime?
+  officialSource        String?
+  sourceUrl             String?
+  date                  DateTime?
+  subject               String?
+  description           String?
+  summaryAr             String?
+  summaryFr             String?
+  fullText              String?
+  keywords              String[]
+  domain                String    @default("OTHER") // ARCHIVES | DOCUMENT_MANAGEMENT | PERSONAL_DATA | CYBERSECURITY | E_SIGNATURE | E_COMMERCE | PUBLIC_PROPERTY | CULTURAL_HERITAGE | ADMINISTRATION | LABOR | FINANCE | TAX | HEALTH | OTHER
+  relevanceScore        Float     @default(0)
+  contentHash           String?
+  version               Int       @default(1)
+  supersedes            String?
+  supersededBy          String?
+  status                String    @default("UNVERIFIED") // ACTIVE | AMENDED | PARTIALLY_AMENDED | REPEALED | SUPERSEDED | DRAFT | UNVERIFIED | CONFLICTING_SOURCES
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  organizationId        String?
+  isGlobal              Boolean   @default(false)
+  retentionRules        Json      @default("{}")
+  accessRules           Json      @default("{}")
+  disposalRules         Json      @default("{}")
+  archiveRules          Json      @default("{}")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  articles               LegalArticle[]
+  versions               LegalReferenceVersion[]
+  outgoingRelations      LegalRelation[]          @relation("SourceRef")
+  incomingRelations      LegalRelation[]          @relation("TargetRef")
+  legalRules             LegalRule[]
+  documentLegalMatches   DocumentLegalMatch[]
+  complianceRequirements ComplianceRequirement[]
+  retentionCandidates    RetentionRuleCandidate[]
 
   @@index([referenceType])
   @@index([organizationId])
+  @@index([status])
+  @@index([domain])
+  @@index([referenceNumber])
+}
+
+model LegalArticle {
+  id                    String   @id @default(uuid())
+  legalReferenceId      String
+  articleNumber         String
+  title                 String?
+  textAr                String?
+  textFr                String?
+  textEn                String?
+  fullText              String?
+  keywords              String[]
+  obligations           String[]
+  prohibitions          String[]
+  permissions           String[]
+  penalties             String[]
+  retentionRequirements String[]
+  privacyRequirements   String[]
+  securityRequirements  String[]
+  evidenceRequirements  String[]
+  documentRequirements  String[]
+  sourcePage            Int?
+  sourceLocation        String?
+  status                String   @default("active")
+  createdAt             DateTime @default(now())
+
+  legalReference LegalReference @relation(fields: [legalReferenceId], references: [id], onDelete: Cascade)
+
+  @@index([legalReferenceId])
+  @@index([articleNumber])
+}
+
+model LegalReferenceVersion {
+  id               String    @id @default(uuid())
+  legalReferenceId String
+  version          Int
+  contentHash      String?
+  sourceUrl        String?
+  fullText         String?
+  retrievedAt      DateTime  @default(now())
+  effectiveFrom    DateTime?
+  effectiveTo      DateTime?
+  changeSummary    String?
+  createdAt        DateTime  @default(now())
+
+  legalReference LegalReference @relation(fields: [legalReferenceId], references: [id], onDelete: Cascade)
+
+  @@index([legalReferenceId])
+}
+
+model LegalRelation {
+  id                String   @id @default(uuid())
+  sourceReferenceId String
+  targetReferenceId String
+  relationType      String // AMENDS | AMENDED_BY | REPEALS | REPEALED_BY | IMPLEMENTS | IMPLEMENTED_BY | RELATED_TO | SUPERSEDES | SUPERSEDED_BY
+  description       String?
+  articleNumber     String?
+  confidence        Float    @default(1)
+  createdAt         DateTime @default(now())
+
+  sourceReference LegalReference @relation("SourceRef", fields: [sourceReferenceId], references: [id], onDelete: Cascade)
+  targetReference LegalReference @relation("TargetRef", fields: [targetReferenceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceReferenceId])
+  @@index([targetReferenceId])
+  @@index([relationType])
+}
+
+model LegalSource {
+  id             String    @id @default(uuid())
+  name           String
+  nameAr         String?
+  nameFr         String?
+  url            String
+  sourceType     String // OFFICIAL_JOURNAL | LEGAL_PORTAL | MINISTRY | ARCHIVES | ISO | SECONDARY
+  priority       Int       @default(0)
+  reliability    Int       @default(5) // 1-5
+  isActive       Boolean   @default(true)
+  lastCheckedAt  DateTime?
+  lastModifiedAt DateTime?
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([sourceType])
+}
+
+model LegalSearchHistory {
+  id              String   @id @default(uuid())
+  userId          String?
+  organizationId  String
+  query           String
+  filters         Json     @default("{}")
+  resultsCount    Int      @default(0)
+  searchedSources String[]
+  timestamp       DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model LegalUpdateAlert {
+  id               String    @id @default(uuid())
+  organizationId   String?
+  legalReferenceId String?
+  title            String
+  description      String?
+  changeType       String // NEW | AMENDMENT | REPEAL | CORRECTION | UPDATE
+  sourceName       String?
+  sourceUrl        String?
+  confidence       Float     @default(0)
+  status           String    @default("pending") // pending | reviewed | imported | ignored
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  metadata         Json      @default("{}")
+  createdAt        DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model LegalReview {
+  id               String    @id @default(uuid())
+  legalReferenceId String
+  organizationId   String
+  reviewerId       String?
+  reviewerName     String?
+  status           String    @default("pending") // pending | approved | rejected | needs_changes
+  notes            String?
+  verifiedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([legalReferenceId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model ComplianceFramework {
+  id           String   @id @default(uuid())
+  name         String
+  nameAr       String?
+  nameFr       String?
+  code         String   @unique
+  type         String // ISO | ALGERIAN_LAW | INTERNATIONAL_REGULATION | INTERNAL
+  jurisdiction String?
+  version      String?
+  description  String?
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  requirements ComplianceRequirement[]
+  assessments  ComplianceAssessment[]
+
+  @@index([type])
+  @@index([jurisdiction])
+}
+
+model ComplianceRequirement {
+  id                     String   @id @default(uuid())
+  frameworkId            String
+  legalReferenceId       String?
+  articleId              String?
+  code                   String
+  title                  String
+  titleAr                String?
+  description            String?
+  category               String?
+  severity               String   @default("MEDIUM") // CRITICAL | HIGH | MEDIUM | LOW
+  mandatory              Boolean  @default(true)
+  evidenceType           String?
+  implementationGuidance String?
+  status                 String   @default("UNASSESSED") // COMPLIANT | PARTIALLY_COMPLIANT | NON_COMPLIANT | UNASSESSED | NOT_APPLICABLE | UNVERIFIED
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  framework      ComplianceFramework  @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  legalReference LegalReference?      @relation(fields: [legalReferenceId], references: [id], onDelete: SetNull)
+  evidence       ComplianceEvidence[]
+  gaps           ComplianceGap[]
+
+  @@index([frameworkId])
+  @@index([status])
+  @@index([severity])
+}
+
+model ComplianceEvidence {
+  id             String    @id @default(uuid())
+  requirementId  String
+  organizationId String
+  documentId     String?
+  policyId       String?
+  auditLogId     String?
+  evidenceType   String // DOCUMENT | POLICY | AUDIT_LOG | SYSTEM_CONFIG | MANUAL_ENTRY | AI_DETECTED
+  description    String
+  status         String    @default("MISSING") // SUPPORTED | PARTIAL | MISSING | CONTRADICTED | NOT_APPLICABLE | UNVERIFIED
+  confidence     Float     @default(0)
+  verifiedBy     String?
+  verifiedAt     DateTime?
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+
+  requirement ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@index([requirementId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model ComplianceAssessment {
+  id                 String   @id @default(uuid())
+  frameworkId        String
+  organizationId     String
+  assessedBy         String?
+  assessedByName     String?
+  overallStatus      String   @default("NOT_ASSESSED") // COMPLIANT | PARTIALLY_COMPLIANT | NON_COMPLIANT | NOT_ASSESSED
+  score              Float    @default(0)
+  totalRequirements  Int      @default(0)
+  compliantCount     Int      @default(0)
+  partialCount       Int      @default(0)
+  nonCompliantCount  Int      @default(0)
+  unassessedCount    Int      @default(0)
+  notApplicableCount Int      @default(0)
+  criticalGaps       Int      @default(0)
+  metadata           Json     @default("{}")
+  assessedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  framework ComplianceFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+
+  @@index([frameworkId])
+  @@index([organizationId])
+}
+
+model ComplianceGap {
+  id             String    @id @default(uuid())
+  requirementId  String
+  organizationId String
+  currentState   String?
+  expectedState  String?
+  gapDescription String?
+  risk           String    @default("MEDIUM") // CRITICAL | HIGH | MEDIUM | LOW
+  recommendation String?
+  priority       String    @default("MEDIUM") // CRITICAL | HIGH | MEDIUM | LOW
+  status         String    @default("open") // open | in_progress | resolved | accepted
+  assignedTo     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  requirement ComplianceRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@index([requirementId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([priority])
+}
+
+model LegalHoldRecord {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  reason         String?
+  caseReference  String?
+  createdBy      String?
+  createdByName  String?
+  releasedBy     String?
+  releasedByName String?
+  releasedAt     DateTime?
+  cancelledAt    DateTime?
+  status         String    @default("ACTIVE") // ACTIVE | RELEASED | CANCELLED
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  documents LegalHoldDocument[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model LegalHoldDocument {
+  id             String    @id @default(uuid())
+  holdId         String
+  documentId     String
+  organizationId String
+  addedBy        String?
+  removedBy      String?
+  addedAt        DateTime  @default(now())
+  removedAt      DateTime?
+
+  hold LegalHoldRecord @relation(fields: [holdId], references: [id], onDelete: Cascade)
+
+  @@index([holdId])
+  @@index([documentId])
+  @@index([organizationId])
+}
+
+model RetentionRuleCandidate {
+  id                String    @id @default(uuid())
+  organizationId    String
+  legalReferenceId  String?
+  articleId         String?
+  documentType      String?
+  retentionPeriod   Int?
+  retentionUnit     String    @default("years") // years | months | days | permanent
+  triggerEvent      String?
+  dispositionAction String    @default("review") // transfer | permanent_archive | disposal | review
+  confidence        Float     @default(0)
+  status            String    @default("NEEDS_REVIEW") // NEEDS_REVIEW | APPROVED | REJECTED | APPLIED
+  approvedBy        String?
+  approvedAt        DateTime?
+  evidenceText      String?
+  sourcePage        Int?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  legalReference LegalReference? @relation(fields: [legalReferenceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([legalReferenceId])
 }
 
 model DocumentSummary {
-  id              String    @id @default(uuid())
-  documentId      String
-  organizationId  String
-  level           String    // short | standard | detailed
-  summary         String
-  keywords        String[]
-  importantDates  Json      @default("[]")
-  parties         Json      @default("[]")
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  documentId     String
+  organizationId String
+  level          String // short | standard | detailed
+  summary        String
+  keywords       String[]
+  importantDates Json     @default("[]")
+  parties        Json     @default("[]")
+  createdAt      DateTime @default(now())
+
   @@index([documentId])
   @@index([organizationId])
 }
 
 model DocumentEmbedding {
-  id              String    @id @default(uuid())
-  documentId      String
-  organizationId  String
-  chunkIndex      Int       @default(0)
-  content         String
-  embedding       Json      @default("[]")
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  documentId     String
+  organizationId String
+  chunkIndex     Int      @default(0)
+  content        String
+  embedding      Json     @default("[]")
+  createdAt      DateTime @default(now())
+
   @@index([documentId])
   @@index([organizationId])
 }
 
 model DocumentRetentionEvent {
-  id              String    @id @default(uuid())
-  documentId      String
-  organizationId  String
-  fromYears       Int?
-  toYears         Int
-  reason          String?
-  decidedBy       String?
-  decidedAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  documentId     String
+  organizationId String
+  fromYears      Int?
+  toYears        Int
+  reason         String?
+  decidedBy      String?
+  decidedAt      DateTime @default(now())
+
   @@index([documentId])
 }
 
 model LegalRule {
-  id              String    @id @default(uuid())
-  referenceId     String?
-  ruleType        String    // retention | access | disposal | archive
-  condition       Json      @default("{}")
-  action          String
-  priority        Int       @default(0)
-  createdAt       DateTime  @default(now())
+  id               String          @id @default(uuid())
+  referenceId      String?
+  ruleType         String // retention | access | disposal | archive
+  condition        Json            @default("{}")
+  action           String
+  priority         Int             @default(0)
+  createdAt        DateTime        @default(now())
+  legalReference   LegalReference? @relation(fields: [legalReferenceId], references: [id])
+  legalReferenceId String?
+
   @@index([referenceId])
 }
 
 model DocumentLegalMatch {
-  id              String    @id @default(uuid())
-  documentId      String
+  id               String         @id @default(uuid())
+  documentId       String
   legalReferenceId String
-  confidence      Float     @default(0)
-  matchedAt       DateTime  @default(now())
+  confidence       Float          @default(0)
+  matchedAt        DateTime       @default(now())
+  legalReference   LegalReference @relation(fields: [legalReferenceId], references: [id])
+
   @@index([documentId])
   @@index([legalReferenceId])
 }
@@ -260,19 +637,19 @@ model Signature {
 }
 
 model ProcessingJob {
-  id              String    @id @default(uuid())
-  organizationId  String
-  documentId      String?
-  documentName    String?
-  stage           String    @default("queued")
-  progress        Int       @default(0)
-  startedAt       DateTime  @default(now())
-  completedAt     DateTime?
-  error           String?
-  retryCount      Int       @default(0)
-  maxRetries      Int       @default(3)
-  idempotencyKey  String?   @unique
-  createdAt       DateTime  @default(now())
+  id             String    @id @default(uuid())
+  organizationId String
+  documentId     String?
+  documentName   String?
+  stage          String    @default("queued")
+  progress       Int       @default(0)
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  error          String?
+  retryCount     Int       @default(0)
+  maxRetries     Int       @default(3)
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
 
   @@index([organizationId])
   @@index([documentId])
@@ -280,53 +657,60 @@ model ProcessingJob {
 }
 
 model AuditLog {
-  id              String    @id @default(uuid())
-  organizationId  String
-  userId          String?
-  action          String
-  resourceType    String?
-  resourceId      String?
-  resourceName    String?
-  metadata        Json      @default("{}")
-  ipAddress       String?
-  userAgent       String?
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String?
+  userName       String?
+  action         String
+  entityType     String?
+  resourceType   String?
+  resourceId     String?
+  resourceName   String?
+  documentId     String?
+  oldValue       Json?
+  newValue       Json?
+  metadata       Json     @default("{}")
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
 
   @@index([organizationId])
   @@index([createdAt])
+  @@index([action])
+  @@index([entityType])
 }
 
 model ActivityEvent {
-  id              String    @id @default(uuid())
-  organizationId  String
-  userId          String?
-  userName        String?
-  action          String
-  resource        String?
-  icon            String?
-  metadata        Json      @default("{}")
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String?
+  userName       String?
+  action         String
+  resource       String?
+  icon           String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
 
   @@index([organizationId])
   @@index([createdAt])
 }
 
 model Notification {
-  id              String    @id @default(uuid())
-  organizationId  String
-  userId          String
-  type            String    @default("info")
-  title           String
-  message         String?
-  read            Boolean   @default(false)
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  type           String   @default("info")
+  title          String
+  message        String?
+  read           Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
   @@index([organizationId, userId])
   @@index([read])
 }
 
 model RetentionPolicy {
-  id                String    @id @default(uuid())
+  id                String   @id @default(uuid())
   organizationId    String
   name              String
   documentType      String?
@@ -334,44 +718,54 @@ model RetentionPolicy {
   jurisdiction      String?
   sector            String?
   retentionYears    Int
-  dispositionAction String    @default("delete")
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  retentionUnit     String   @default("years")
+  triggerEvent      String?
+  legalReferenceId  String?
+  articleId         String?
+  dispositionAction String   @default("delete") // transfer | permanent_archive | disposal | delete
+  reviewRequired    Boolean  @default(false)
+  legalHoldAllowed  Boolean  @default(true)
+  isActive          Boolean  @default(true)
+  version           Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 model Collection {
-  id              String    @id @default(uuid())
-  organizationId  String
-  name            String
-  description     String?
-  isAiSuggested   Boolean   @default(false)
-  createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  isAiSuggested  Boolean  @default(false)
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model DocumentTemplate {
-  id              String    @id @default(uuid())
-  organizationId  String?
-  name            String
-  type            String    @default("other")
-  classification  String    @default("internal")
-  fields          Json      @default("{}")
-  isSystem        Boolean   @default(false)
-  createdAt       DateTime  @default(now())
+  id             String   @id @default(uuid())
+  organizationId String?
+  name           String
+  type           String   @default("other")
+  classification String   @default("internal")
+  fields         Json     @default("{}")
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
   @@index([organizationId])
 }
 
 model Workflow {
-  id              String    @id @default(uuid())
-  organizationId  String
-  name            String
-  description     String?
-  triggerType     String
-  conditions      Json      @default("{}")
-  actions         Json      @default("[]")
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  triggerType    String
+  conditions     Json     @default("{}")
+  actions        Json     @default("[]")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

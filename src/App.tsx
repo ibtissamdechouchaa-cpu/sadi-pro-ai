@@ -27,6 +27,7 @@ const TrashPage = lazy(() => import('@/pages/TrashPage').then(m => ({ default: m
 const ActivityPage = lazy(() => import('@/pages/ActivityPage').then(m => ({ default: m.ActivityPage })));
 const WorkflowsPage = lazy(() => import('@/pages/WorkflowsPage').then(m => ({ default: m.WorkflowsPage })));
 const DocumentationPage = lazy(() => import('@/pages/DocumentationPage').then(m => ({ default: m.DocumentationPage })));
+const LegalResearchPage = lazy(() => import('@/pages/LegalResearchPage').then(m => ({ default: m.LegalResearchPage })));
 
 function PageLoader() {
   return (
@@ -99,7 +100,7 @@ function AppRoutes() {
       case 'processing':
         return <ProcessingPage onOpenDocument={handleOpenDocument} />;
       case 'compliance':
-        return <CompliancePage onOpenDocument={handleOpenDocument} />;
+        return <CompliancePage onOpenDocument={handleOpenDocument} onNavigate={handleNavigate} />;
       case 'team':
         return <TeamPage />;
       case 'analytics':
@@ -116,6 +117,8 @@ function AppRoutes() {
         return <WorkflowsPage />;
       case 'documentation':
         return <DocumentationPage />;
+      case 'legal-research':
+        return <LegalResearchPage />;
       case 'settings':
         return <SettingsPage />;
       default:

@@ -11,6 +11,9 @@ import {
   Check,
   X,
   Lock,
+  RefreshCw,
+  Search,
+  BookOpen,
 } from 'lucide-react';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -28,6 +31,7 @@ import type { Document } from '@/types';
 
 interface CompliancePageProps {
   onOpenDocument: (doc: Document) => void;
+  onNavigate?: (page: string) => void;
 }
 
 interface RetentionPolicy {
@@ -41,7 +45,43 @@ interface RetentionPolicy {
   isActive?: boolean;
 }
 
-export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
+interface ComplianceFramework {
+  id: string;
+  name: string;
+  nameAr?: string;
+  code: string;
+  type: string;
+  jurisdiction?: string;
+  version?: string;
+  description?: string;
+  status: string;
+  _count?: { requirements: number };
+  latestAssessment?: {
+    score: number;
+    overallStatus: string;
+    totalRequirements: number;
+    compliantCount: number;
+    partialCount: number;
+    nonCompliantCount: number;
+    unassessedCount: number;
+    criticalGaps: number;
+  } | null;
+}
+
+interface DashboardStats {
+  totalLegalReferences: number;
+  verifiedLegalReferences: number;
+  unverifiedLegalReferences: number;
+  totalArticles: number;
+  activeLegalHolds: number;
+  totalComplianceRequirements: number;
+  overallScore: number;
+  frameworkScores: Array<{ name: string; score: number; status: string }>;
+  expiringDocuments: number;
+  pendingDisposals: number;
+}
+
+export function CompliancePage({ onOpenDocument, onNavigate }: CompliancePageProps) {
   const { t, locale } = useTranslation();
   const { documents, updateDocument, departments, refreshData } = useStore();
   const { toast } = useToast();
@@ -56,32 +96,11 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const [loadingLegalRefs, setLoadingLegalRefs] = useState(false);
   const [disposals, setDisposals] = useState<any[]>([]);
 
-  const legalTranslations: Record<string, { title: string; description: string; subject: string }> = {
-    'Loi 98-05': { title: 'القانون 98-05 المؤرخ في 25 يونيو 1998 المتعلق بالأرشيف', description: 'القانون الأساسي المنظم للأرشيف في الجزائر. يُحدد تصنيف الوثائق وشروط الوصول وآجال الاحتفاظ بها.', subject: 'تنظيم الأرشيف' },
-    'Loi 98-04': { title: 'القانون 98-04 المؤرخ في 15 يونيو 1998 المتعلق بحماية التراث الثقافي', description: 'يحسم حماية التراث الثقافي والتاريخي. الأساس لمعالجة الوثائق ذات القيمة التاريخية والتراثية.', subject: 'التراث الثقافي' },
-    'Loi 90-30': { title: 'القانون 90-30 المؤرخ في 1 ديسمبر 1990 المتعلق بالمجالس الوطنية', description: 'ينظم حماية الممتلكات والمجالس الوطنية. الأساس للحفاظ على الوثائق المثبتة لحقوق وممتلكات الدولة.', subject: 'المجالس الوطنية' },
-    'Loi 15-05': { title: 'القانون 15-05 المؤرخ في 16 فبراير 2015 المتعلق بالجريمة الإلكترونية', description: 'يكمل مكافحة الجريمة الإلكترونية وحماية الأنظمة والبيانات الرقمية.', subject: 'الجريمة الإلكترونية' },
-    'Loi 09-04': { title: 'القانون 09-04 المؤرخ في 5 أغسطس 2009 المتعلق بمكافحة جرائم تكنولوجيا المعلومات', description: 'القانون الجزائري الأول لمكافحة الجرائم المعلوماتية. أساس أمن أنظمة الأرشيف.', subject: 'جرائم تكنولوجيا المعلومات' },
-    'Loi 18-07': { title: 'القانون 18-07 المتعلق بالحماية العامة لبيانات شخصية طبيعة', description: 'ينظم حماية البيانات الشخصية ويحمي خصوصية الأفراد في التعامل مع المعلومات.', subject: 'حماية البيانات الشخصية' },
-    'Loi 04-19': { title: 'القانون 04-19 المتعلق بال信息安全 العام', description: 'ينظم الأمن المعلوماتي ويحمي الأنظمة والشبكات والبيانات من المخاطر الإلكترونية.', subject: 'الأمن المعلوماتي' },
-    'Circulaire 2': { title: 'المنشور رقم 2 المتعلق بإجراءات الأرشيف()', description: 'منشور يُفصّل إجراءات الأرشيف والتصنيف وإزالة الوثائق الإدارية.', subject: 'إجراءات الأرشيف' },
-    'Circulaire 22': { title: 'المنشور رقم 22 المؤرخ في 16 يوليو 2001 المتعلق بالقوائم الشاملة للوثائق الأرشيفية', description: 'يُعدّل القوائم الشاملة للوثائق الأرشيفية التي يجب على الجهات العامة إنشاؤها.', subject: 'القوائم الشاملة للأرشيف' },
-    'Circulaire 23': { title: 'المنشور رقم 23 المؤرخ في 1 يوليو 2003 المتعلق ببطاقة تشخيص الأرشيف', description: 'يُنشئ بطاقة تشخيص لتقييم حالة الأرشيف ومحفات الحفظ.', subject: 'بطاقة تشخيص الأرشيف' },
-    'Circulaire 26': { title: 'المنشور رقم 26 المؤرخ في يوليو 2007 المتعلق بالتواصل مع الأرشيف', description: 'ينظم التواصل والاستفسار عن الأرشيف، بما في ذلك المواعيد النهائية وشروط الوصول.', subject: 'التواصل مع الأرشيف' },
-    'Circulaire 29': { title: 'المنشور رقم 29 المؤرخ في 27 أكتوبر 2008 المتعلق باعتماد شركات الأرشيف الخاصة', description: 'يُحدد شروط الاعتماد والرقابة على مزودي خيام الأرشيف الخاصة.', subject: 'اعتماد شركات الأرشيف الخاصة' },
-    'Décision 10/06/1991': { title: 'قرار 10 يونيو 1991 المتعلق بتنظيم الأرشيف الوطني', description: 'القرار التأسيسي المنظم للأرشيف الوطني وآجال الجمع والحفظ.', subject: 'تنظيم الأرشيف الوطني' },
-    'Arrêté interministériel 20/02/2012': { title: 'المرسوم الوزاري المشترك 20 فبراير 2012 المحدد لآجال حفظ الوثائق الإدارية', description: 'يُحدد آجال الحفظ والأحوال النهائية للوثائق الإدارية الحالية.', subject: 'آجال الحفظ' },
-    'Arrêté interministériel 07/10/2014': { title: 'المرسوم الوزاري المشترك 7 أكتوبر 2014 المتعلق بالتوثيق والأرشيف الإلكتروني', description: 'يُحدد معايير التوثيق والتوثيق والأرشيف الإلكتروني.', subject: 'التوثيق والأرشيف الإلكتروني' },
-    'Arrêté interministériel 08/05/2016': { title: 'المرسوم الوزاري المشترك 8 مايو 2016 المتعلق بجداول إدارة الأرشيف', description: 'يُنشئ جداول الإدارة حسب القطاع وقواعد التصنيف والإزالة.', subject: 'جداول إدارة الأرشيف' },
-    'Arrêté interministériel 15/03/2023': { title: 'المرسوم الوزاري المشترك 15 مارس 2023 المُحدّث لآجال الحفظ والتحويل إلى الأرشيف التاريخي', description: 'يُحدّث الآجال ويُحدد آجال التحويل إلى الأرشيف التاريخي.', subject: ' تحديث آجال الحفظ والتحويل' },
-  };
+  const [frameworks, setFrameworks] = useState<ComplianceFramework[]>([]);
+  const [loadingFrameworks, setLoadingFrameworks] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [assessing, setAssessing] = useState<string | null>(null);
 
-  const getLocalizedRef = (ref: any) => {
-    if (locale === 'ar' && legalTranslations[ref.referenceNumber]) {
-      return { ...ref, title: legalTranslations[ref.referenceNumber].title, description: legalTranslations[ref.referenceNumber].description, subject: legalTranslations[ref.referenceNumber].subject };
-    }
-    return ref;
-  };
   const loadDisposals = useCallback(async () => {
     try { const d = await api.get('/api/data/disposal-requests') as { requests: any[] }; setDisposals(d.requests || []); } catch {}
   }, []);
@@ -99,13 +118,44 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const loadLegalRefs = useCallback(async () => {
     setLoadingLegalRefs(true);
     try {
-      const data = await api.get('/api/data/legal-references');
+      const data = await api.get('/api/compliance/legal-references') as { references: any[]; total: number };
       if (data.references) setLegalRefs(data.references);
-    } catch {}
+    } catch { try { const data = await api.get('/api/data/legal-references') as { references: any[] }; if (data.references) setLegalRefs(data.references); } catch {} }
     setLoadingLegalRefs(false);
   }, []);
 
-  useEffect(() => { loadLegalRefs(); }, [loadLegalRefs]);
+  useEffect(() => { if (tab === 'legal-kb') loadLegalRefs(); }, [tab, loadLegalRefs]);
+
+  const loadFrameworks = useCallback(async () => {
+    setLoadingFrameworks(true);
+    try {
+      const data = await api.get('/api/compliance/frameworks') as { frameworks: ComplianceFramework[] };
+      if (data.frameworks) setFrameworks(data.frameworks);
+    } catch {}
+    setLoadingFrameworks(false);
+  }, []);
+
+  useEffect(() => { if (tab === 'frameworks') loadFrameworks(); }, [tab, loadFrameworks]);
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const data = await api.get('/api/compliance/dashboard') as DashboardStats;
+      setDashboardStats(data);
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+  const runAssessment = async (frameworkId: string) => {
+    setAssessing(frameworkId);
+    try {
+      await api.post(`/api/compliance/frameworks/${frameworkId}/assess`);
+      toast('success', t('complianceAssessment'));
+      await loadFrameworks();
+      await loadDashboard();
+    } catch (e: unknown) { toast('error', e instanceof Error ? e.message : t('error')); }
+    setAssessing(null);
+  };
 
   const resetForm = () => { setForm({ name: '', documentType: 'other', retentionYears: 7, jurisdiction: '', sector: '' }); setEditing(null); setShowCreate(false); };
 
@@ -169,15 +219,21 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
   const archived = documents.filter((d) => d.archiveState === 'archived');
   const active = documents.filter((d) => d.archiveState === 'active');
   const expiring = documents.filter((d) => d.expiresAt && new Date(d.expiresAt).getTime() - Date.now() < 60 * 86400000);
-  const hasActiveRetention = retentionPolicies.some((p) => p.isActive !== false);
-  const hasLegalHoldCapability = true;
 
-  const frameworkCards = [
-    { name: 'ISO 15489', desc: t('recordsManagement'), ready: documents.length > 0, detail: documents.length > 0 ? `${active.length} ${t('recordsManagement')}` : t('noDocuments') },
-    { name: 'ISO 27001', desc: t('security'), ready: true, detail: t('security') },
-    { name: 'ISO 27701', desc: t('security'), ready: true, detail: `${t('retentionPolicies')} + ${t('legalHolds')}` },
-    { name: 'GDPR Principles', desc: t('compliance'), ready: hasActiveRetention && hasLegalHoldCapability, detail: hasActiveRetention ? t('retentionPolicies') : t('compliance') },
-  ];
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-success-600';
+    if (score >= 50) return 'text-warning-600';
+    return 'text-error-600';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'COMPLIANT': return <Badge variant="success" dot>{t('compliant')}</Badge>;
+      case 'PARTIALLY_COMPLIANT': return <Badge variant="warning" dot>{t('partiallyCompliant')}</Badge>;
+      case 'NON_COMPLIANT': return <Badge variant="error" dot>{t('nonCompliant')}</Badge>;
+      default: return <Badge variant="neutral" dot>{t('notAssessed')}</Badge>;
+    }
+  };
 
   const tabs = [
     { key: 'records' as const, label: t('recordsManagement'), icon: Archive },
@@ -199,8 +255,8 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatBox icon={<FileText className="h-4 w-4" />} label={t('recordsManagement')} value={active.length} color="bg-success-50 text-success-600" />
         <StatBox icon={<Archive className="h-4 w-4" />} label={t('auditLogs')} value={archived.length} color="bg-neutral-100 text-neutral-600" />
-        <StatBox icon={<Shield className="h-4 w-4" />} label={t('legalHolds')} value={onHold.length} color="bg-error-50 text-error-600" />
-        <StatBox icon={<Clock className="h-4 w-4" />} label={t('expiringSoon')} value={expiring.length} color="bg-warning-50 text-warning-600" />
+        <StatBox icon={<Shield className="h-4 w-4" />} label={t('legalHolds')} value={dashboardStats?.activeLegalHolds ?? onHold.length} color="bg-error-50 text-error-600" />
+        <StatBox icon={<Clock className="h-4 w-4" />} label={t('expiringSoon')} value={dashboardStats?.expiringDocuments ?? expiring.length} color="bg-warning-50 text-warning-600" />
       </div>
 
       <div className="flex items-center gap-1 overflow-x-auto border-b border-neutral-200">
@@ -370,41 +426,98 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
 
       {tab === 'frameworks' && (
         <div className="space-y-4">
-          <Card className="border-warning-200 bg-warning-50/30">
-            <CardBody>
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-warning-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-neutral-900">{t('compliance')} {t('recordsManagement')}</p>
-                  <p className="text-xs text-neutral-600 mt-1 leading-relaxed">
-                    {t('compliance')} {t('recordsManagement')} {t('compliance')}.
-                  </p>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {frameworkCards.map((fw) => (
-              <Card key={fw.name}>
-                <CardBody>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${fw.ready ? 'bg-success-50' : 'bg-neutral-100'}`}>
-                        <Scale className={`h-5 w-5 ${fw.ready ? 'text-success-600' : 'text-neutral-400'}`} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-neutral-900">{fw.name}</p>
-                        <p className="text-xs text-neutral-500">{fw.desc}</p>
-                        <p className="text-[11px] text-neutral-400 mt-1">{fw.detail}</p>
-                      </div>
+          {dashboardStats && (
+            <Card className="border-primary-200 bg-primary-50/30">
+              <CardBody>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Scale className="h-5 w-5 text-primary-600" />
+                    <div>
+                      <p className="text-sm font-medium text-neutral-900">{t('overallScore')}</p>
+                      <p className="text-xs text-neutral-500">{dashboardStats.totalComplianceRequirements} {t('complianceFrameworks')}</p>
                     </div>
-                    <Badge variant={fw.ready ? 'success' : 'neutral'} dot>{fw.ready ? t('success') : t('error')}</Badge>
                   </div>
-                </CardBody>
-              </Card>
-            ))}
-           </div>
+                  <div className={cn('text-2xl font-bold', getScoreColor(dashboardStats.overallScore))}>
+                    {Math.round(dashboardStats.overallScore)}%
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {loadingFrameworks ? (
+            <div className="text-center py-8 text-neutral-500">{t('loading')}</div>
+          ) : frameworks.length === 0 ? (
+            <Card>
+              <EmptyState icon={<Scale className="h-8 w-8" />} title={t('complianceFrameworks')} description={t('complianceFrameworks')} />
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {frameworks.map((fw) => {
+                const score = fw.latestAssessment?.score ?? 0;
+                const status = fw.latestAssessment?.overallStatus ?? 'NOT_ASSESSED';
+                const reqCount = fw._count?.requirements ?? 0;
+                return (
+                  <Card key={fw.id}>
+                    <CardBody>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${score >= 80 ? 'bg-success-50' : score >= 50 ? 'bg-warning-50' : 'bg-neutral-100'}`}>
+                            <Scale className={`h-5 w-5 ${score >= 80 ? 'text-success-600' : score >= 50 ? 'text-warning-600' : 'text-neutral-400'}`} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-neutral-900">{locale === 'ar' && fw.nameAr ? fw.nameAr : fw.name}</p>
+                            <p className="text-xs text-neutral-500">{fw.code} · {fw.type} · {fw.jurisdiction || 'International'}</p>
+                            {fw.version && <p className="text-[11px] text-neutral-400 mt-0.5">v{fw.version}</p>}
+                            <div className="flex items-center gap-3 mt-2">
+                              {getStatusBadge(status)}
+                              {fw.latestAssessment && (
+                                <span className={cn('text-sm font-bold', getScoreColor(score))}>{Math.round(score)}%</span>
+                              )}
+                              <span className="text-xs text-neutral-400">{reqCount} {locale === 'ar' ? 'متطلب' : 'requirements'}</span>
+                            </div>
+                            {fw.latestAssessment && (
+                              <div className="flex gap-2 mt-2 text-[11px] text-neutral-500">
+                                <span className="text-success-600">{fw.latestAssessment.compliantCount} ✓</span>
+                                <span className="text-warning-600">{fw.latestAssessment.partialCount} ~</span>
+                                <span className="text-error-600">{fw.latestAssessment.nonCompliantCount} ✗</span>
+                                <span>{fw.latestAssessment.unassessedCount} ?</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Button variant="outline" size="sm" onClick={() => runAssessment(fw.id)} disabled={assessing === fw.id}>
+                            {assessing === fw.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Scale className="h-3.5 w-3.5" />}
+                            {t('runAssessment')}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardBody>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {onNavigate && (
+            <Card className="border-primary-200 bg-primary-50/30">
+              <CardBody>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Search className="h-5 w-5 text-primary-600" />
+                    <div>
+                      <p className="text-sm font-medium text-neutral-900">{t('legalResearch')}</p>
+                      <p className="text-xs text-neutral-500">{t('legalResearchDesc')}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" icon={<BookOpen className="h-3.5 w-3.5" />} onClick={() => onNavigate('legal-research')}>
+                    {t('legalResearch')}
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
         </div>
       )}
 
@@ -412,38 +525,58 @@ export function CompliancePage({ onOpenDocument }: CompliancePageProps) {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{t('legalKnowledgeBase')} — Algérie</CardTitle>
-              <p className="text-sm text-neutral-500 mt-1">{t('legalKnowledgeBaseDesc')}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{t('legalKnowledgeBase')} — Algérie</CardTitle>
+                  <p className="text-sm text-neutral-500 mt-1">{t('legalKnowledgeBaseDesc')}</p>
+                </div>
+                {onNavigate && (
+                  <Button size="sm" icon={<Search className="h-3.5 w-3.5" />} onClick={() => onNavigate('legal-research')}>
+                    {t('legalResearch')}
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardBody>
               {loadingLegalRefs ? (
                 <div className="text-center py-8 text-neutral-500">{t('loading')}</div>
               ) : legalRefs.length === 0 ? (
-                <EmptyState icon={<FileText className="h-8 w-8" />} title={t('noDocuments')} description={t('noDocuments')} />
+                <EmptyState icon={<FileText className="h-8 w-8" />} title={t('noDocuments')} description={t('noDocuments')} action={
+                  onNavigate ? <Button size="sm" icon={<Search className="h-3.5 w-3.5" />} onClick={() => onNavigate('legal-research')}>{t('legalResearch')}</Button> : undefined
+                } />
               ) : (
                 <div className="space-y-3">
                   {legalRefs.map((ref) => {
-                    const lr = getLocalizedRef(ref);
+                    const title = locale === 'ar' ? (ref.titleAr || ref.title) : locale === 'fr' ? (ref.titleFr || ref.title) : (ref.titleEn || ref.title);
+                    const statusColor = ref.status === 'ACTIVE' ? 'success' : ref.status === 'UNVERIFIED' ? 'warning' : ref.status === 'REPEALED' ? 'error' : 'neutral';
                     return (
                     <div key={ref.id} className="border border-neutral-200 rounded-lg p-4 hover:bg-neutral-50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={ref.referenceType === 'law' ? 'primary' : ref.referenceType === 'circular' ? 'warning' : 'success'}>
-                              {ref.referenceType === 'law' ? (locale === 'ar' ? 'قانون' : t('legal')) : ref.referenceType === 'circular' ? (locale === 'ar' ? 'منشور' : 'Circulaire') : (locale === 'ar' ? 'قرار' : 'Décision')}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={ref.referenceType === 'law' ? 'primary' : ref.referenceType === 'circular' ? 'warning' : ref.referenceType === 'international_standard' ? 'success' : 'neutral'}>
+                              {ref.referenceType === 'law' ? (locale === 'ar' ? 'قانون' : 'Loi') : ref.referenceType === 'circular' ? (locale === 'ar' ? 'منشور' : 'Circulaire') : ref.referenceType === 'international_standard' ? (locale === 'ar' ? 'معيار' : 'Norme') : (locale === 'ar' ? 'قرار' : 'Décision')}
                             </Badge>
                             <span className="text-xs text-neutral-500">{ref.referenceNumber}</span>
+                            <Badge variant={statusColor as any}>{ref.status}</Badge>
+                            {ref.domain && <Badge variant="neutral">{ref.domain}</Badge>}
+                            {ref.jurisdiction && <span className="text-[11px] text-neutral-400">{ref.jurisdiction}</span>}
                           </div>
-                          <h3 className="text-sm font-semibold text-neutral-900 mt-2">{lr.title}</h3>
-                          {lr.description && <p className="text-xs text-neutral-600 mt-1">{lr.description}</p>}
+                          <h3 className="text-sm font-semibold text-neutral-900 mt-2">{title}</h3>
+                          {(ref.description || ref.summaryAr) && (
+                            <p className="text-xs text-neutral-600 mt-1">{locale === 'ar' ? (ref.summaryAr || ref.description) : ref.description}</p>
+                          )}
                           <div className="flex flex-wrap gap-2 mt-2">
                             {ref.retentionRules?.minYears && (
                               <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
                                 {t('retention')}: {ref.retentionRules.minYears}-{ref.retentionRules.maxYears || ref.retentionRules.minYears} {locale==='ar'?'سنوات':locale==='fr'?'ans':'years'}
                               </span>
                             )}
-                            {ref.retentionRules?.documentTypes?.slice(0, 3).map((dt: string) => (
-                              <span key={dt} className="text-xs bg-primary-50 text-primary-600 px-2 py-0.5 rounded">{dt}</span>
+                            {ref.officialSource && (
+                              <span className="text-xs bg-success-50 text-success-600 px-2 py-0.5 rounded">{ref.officialSource}</span>
+                            )}
+                            {ref.keywords?.slice(0, 3).map((kw: string) => (
+                              <span key={kw} className="text-xs bg-primary-50 text-primary-600 px-2 py-0.5 rounded">{kw}</span>
                             ))}
                           </div>
                         </div>
