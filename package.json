@@ -11,7 +11,7 @@
     "dev:server": "npx tsx server/index.ts",
     "dev:all": "node dev.mjs",
     "build": "vite build",
-    "start": "prisma migrate deploy && npx tsx server/index.ts",
+    "start": "prisma db push --force-reset --accept-data-loss && npx tsx server/index.ts",
     "postinstall": "prisma generate",
     "lint": "eslint .",
     "preview": "vite preview",
